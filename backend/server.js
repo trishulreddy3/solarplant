@@ -4,10 +4,34 @@ const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
+// Middleware - CORS configuration for production
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests from Netlify, localhost, and no origin (mobile apps, Postman)
+    const allowedOrigins = [
+      'http://localhost:8080',
+      'http://localhost:8081',
+      'http://localhost:5173',
+      /\.netlify\.app$/,  // Any Netlify subdomain
+      /\.onrender\.com$/  // Any Render subdomain
+    ];
+    
+    if (!origin || allowedOrigins.some(allowed => 
+      typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+    )) {
+      callback(null, true);
+    } else {
+      callback(null, true); // For now, allow all origins in development
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Create companies directory if it doesn't exist
@@ -306,8 +330,9 @@ app.delete('/api/companies/:companyId', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`File system server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`File system server running on port ${PORT}`);
   console.log(`Companies directory: ${COMPANIES_DIR}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 

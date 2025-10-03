@@ -1,7 +1,7 @@
 // Real file system operations using backend API
 // This creates actual physical folders and files on the system
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 export interface CompanyFolder {
   id: string;
