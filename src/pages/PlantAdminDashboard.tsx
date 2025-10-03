@@ -74,12 +74,12 @@ const PlantAdminDashboard = () => {
             </h1>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleSyncCompany} variant="outline" size="sm">
+          <div className="flex gap-3">
+            <Button onClick={handleSyncCompany} className="btn-outline-modern px-4 py-2">
               <RefreshCw className="mr-2 h-4 w-4" />
               Sync Company
             </Button>
-            <Button onClick={handleLogout} variant="outline">
+            <Button onClick={handleLogout} className="btn-outline-modern px-4 py-2">
               <LogOut className="mr-2 h-4 w-4" />
               Logout
             </Button>
@@ -90,7 +90,7 @@ const PlantAdminDashboard = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="grid gap-6 md:grid-cols-3">
           <Card
-            className="glass-card hover:shadow-xl transition-all cursor-pointer group"
+            className="card-modern hover:shadow-2xl transition-all cursor-pointer group"
             onClick={() => navigate('/infrastructure')}
           >
             <CardHeader>
@@ -107,7 +107,7 @@ const PlantAdminDashboard = () => {
           </Card>
 
           <Card
-            className="glass-card hover:shadow-xl transition-all cursor-pointer group"
+            className="card-modern hover:shadow-2xl transition-all cursor-pointer group"
             onClick={() => navigate('/existing-users')}
           >
             <CardHeader>
@@ -124,7 +124,7 @@ const PlantAdminDashboard = () => {
           </Card>
 
           <Card
-            className="glass-card hover:shadow-xl transition-all cursor-pointer group"
+            className="card-modern hover:shadow-2xl transition-all cursor-pointer group"
             onClick={() => navigate('/add-user')}
           >
             <CardHeader>

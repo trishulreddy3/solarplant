@@ -85,7 +85,7 @@ const Infrastructure = () => {
           </div>
         </header>
         <main className="container mx-auto px-4 py-8">
-          <Card className="glass-card">
+          <Card className="card-modern">
             <CardContent className="py-12 text-center">
               <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground animate-pulse" />
               <p className="text-lg font-semibold mb-2">Loading Infrastructure Data...</p>
@@ -116,7 +116,7 @@ const Infrastructure = () => {
           </div>
         </header>
         <main className="container mx-auto px-4 py-8">
-          <Card className="glass-card">
+          <Card className="card-modern">
             <CardContent className="py-12 text-center">
               <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-lg font-semibold mb-2">Company Not Found</p>
@@ -151,7 +151,7 @@ const Infrastructure = () => {
 
       <main className="container mx-auto px-4 py-8 space-y-6">
         {/* Plant Details */}
-        <Card className="glass-card">
+        <Card className="card-modern">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-primary" />
@@ -179,30 +179,27 @@ const Infrastructure = () => {
         </Card>
 
         {/* Action Buttons */}
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 gap-6">
           <Button
             onClick={() => navigate('/add-table')}
-            size="lg"
-            className="h-24 gradient-primary text-lg"
+            className="h-24 text-lg btn-primary-modern"
           >
-            <Plus className="mr-2 h-6 w-6" />
+            <Plus className="mr-3 h-6 w-6" />
             Add New Table
           </Button>
 
           <Button
             onClick={() => navigate('/view-tables')}
-            size="lg"
-            variant="outline"
-            className="h-24 text-lg border-2"
+            className="h-24 text-lg btn-secondary-modern"
           >
-            <Eye className="mr-2 h-6 w-6" />
+            <Eye className="mr-3 h-6 w-6" />
             View Tables & Panels
           </Button>
         </div>
 
         {/* Recent Tables */}
         {tables.length > 0 && (
-          <Card className="glass-card">
+          <Card className="card-modern">
             <CardHeader>
               <CardTitle>Recent Tables</CardTitle>
             </CardHeader>
