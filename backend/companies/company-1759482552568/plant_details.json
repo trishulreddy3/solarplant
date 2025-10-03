@@ -1,0 +1,11 @@
+{
+  "companyId": "company-1759482552568",
+  "companyName": "whipro",
+  "voltagePerPanel": 20,
+  "currentPerPanel": 10,
+  "powerPerPanel": 200,
+  "plantPowerKW": 990,
+  "tables": [],
+  "createdAt": "2025-10-03T09:09:13.017Z",
+  "lastUpdated": "2025-10-03T09:09:13.017Z"
+}

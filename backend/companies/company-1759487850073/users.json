@@ -1,0 +1,10 @@
+[
+  {
+    "id": "user-1759487850133",
+    "email": "karthik@gmail.com",
+    "password": "admin123",
+    "role": "admin",
+    "createdAt": "2025-10-03T10:37:30.128Z",
+    "createdBy": "super_admin"
+  }
+]
