@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Zap, Plus, Eye } from 'lucide-react';
+import { ArrowLeft, Zap, Plus, Eye, Building2 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { getTablesByCompany } from '@/lib/data';
 import { getCompanies } from '@/lib/auth';
@@ -12,6 +12,7 @@ const Infrastructure = () => {
   const [user] = useState(getCurrentUser());
   const [company, setCompany] = useState<any>(null);
   const [tables, setTables] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user || user.role !== 'plant_admin') {
@@ -19,15 +20,118 @@ const Infrastructure = () => {
       return;
     }
 
-    const companies = getCompanies();
-    const userCompany = companies.find(c => c.id === user.companyId);
-    setCompany(userCompany);
+    const loadData = async () => {
+      if (!user?.companyId) return;
 
-    const companyTables = getTablesByCompany(user.companyId!);
-    setTables(companyTables);
+      try {
+        // Try to load from backend first
+        const { getAllCompanies } = await import('@/lib/realFileSystem');
+        const backendCompanies = await getAllCompanies();
+        const selectedCompany = backendCompanies.find(c => c.id === user.companyId);
+        
+        if (selectedCompany) {
+          setCompany(selectedCompany);
+          
+          // Load plant details to get tables
+          const { getPlantDetails } = await import('@/lib/realFileSystem');
+          const plantDetails = await getPlantDetails(user.companyId);
+          if (plantDetails) {
+            setTables(plantDetails.tables || []);
+          } else {
+            setTables([]);
+          }
+        } else {
+          // Fallback to localStorage
+          const companies = getCompanies();
+          const userCompany = companies.find(c => c.id === user.companyId);
+          setCompany(userCompany);
+
+          const companyTables = getTablesByCompany(user.companyId);
+          setTables(companyTables);
+        }
+      } catch (error) {
+        console.error('Error loading company data:', error);
+        // Fallback to localStorage
+        const companies = getCompanies();
+        const userCompany = companies.find(c => c.id === user.companyId);
+        setCompany(userCompany);
+
+        const companyTables = getTablesByCompany(user.companyId);
+        setTables(companyTables);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, [user, navigate]);
 
-  if (!user || !company) return null;
+  if (!user) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        <header className="glass-header sticky top-0 z-10">
+          <div className="container mx-auto px-4 py-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/plant-admin-dashboard')}
+              className="mb-2"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Dashboard
+            </Button>
+            <h1 className="text-2xl font-bold gradient-text">Infrastructure Management</h1>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-8">
+          <Card className="glass-card">
+            <CardContent className="py-12 text-center">
+              <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground animate-pulse" />
+              <p className="text-lg font-semibold mb-2">Loading Infrastructure Data...</p>
+              <p className="text-sm text-muted-foreground">
+                Please wait while we fetch the company information.
+              </p>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  if (!company) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        <header className="glass-header sticky top-0 z-10">
+          <div className="container mx-auto px-4 py-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/plant-admin-dashboard')}
+              className="mb-2"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Dashboard
+            </Button>
+            <h1 className="text-2xl font-bold gradient-text">Infrastructure Management</h1>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-8">
+          <Card className="glass-card">
+            <CardContent className="py-12 text-center">
+              <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-lg font-semibold mb-2">Company Not Found</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Unable to load company information. Please try logging in again.
+              </p>
+              <Button onClick={() => navigate('/admin-login')}>
+                Go to Login
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -61,11 +165,11 @@ const Infrastructure = () => {
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Panel Voltage</p>
-              <p className="text-2xl font-bold text-secondary">{company.panelVoltage} V</p>
+              <p className="text-2xl font-bold text-secondary">{company.voltagePerPanel} V</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Panel Current</p>
-              <p className="text-2xl font-bold text-secondary">{company.panelCurrent} A</p>
+              <p className="text-2xl font-bold text-secondary">{company.currentPerPanel} A</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Total Tables</p>
