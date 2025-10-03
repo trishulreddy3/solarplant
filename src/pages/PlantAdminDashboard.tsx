@@ -65,14 +65,14 @@ const PlantAdminDashboard = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <header className="glass-header sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-10 shadow-sm">
+        <div className="container mx-auto px-4 py-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
               WELCOME {user.companyName?.toUpperCase()} ADMIN
             </h1>
-            <p className="text-sm text-muted-foreground">{user.email}</p>
+            <p className="text-base text-gray-600 font-medium">{user.email}</p>
           </div>
           <div className="flex gap-3">
             <Button onClick={handleSyncCompany} className="btn-outline-modern px-4 py-2">

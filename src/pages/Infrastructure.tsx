@@ -179,20 +179,20 @@ const Infrastructure = () => {
         </Card>
 
         {/* Action Buttons */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-4">
           <Button
             onClick={() => navigate('/add-table')}
-            className="h-24 text-lg btn-primary-modern"
+            className="h-16 text-base btn-primary-modern rounded-3xl px-6 w-fit mx-auto"
           >
-            <Plus className="mr-3 h-6 w-6" />
+            <Plus className="mr-2 h-5 w-5" />
             Add New Table
           </Button>
 
           <Button
             onClick={() => navigate('/view-tables')}
-            className="h-24 text-lg btn-secondary-modern"
+            className="h-16 text-base btn-secondary-modern rounded-3xl px-6 w-fit mx-auto"
           >
-            <Eye className="mr-3 h-6 w-6" />
+            <Eye className="mr-2 h-5 w-5" />
             View Tables & Panels
           </Button>
         </div>
