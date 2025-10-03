@@ -25,8 +25,8 @@ export interface Company {
 
 // Super Admin credentials (hardcoded for demo)
 const SUPER_ADMIN = {
-  email: 'trishureddy.microsyslogic@gmail.com',
-  password: 'superadmin123',
+  email: 'super_admin@microsyslogic.com',
+  password: 'super_admin_password',
   role: 'super_admin' as UserRole,
   companyName: 'Microsyslogic',
 };

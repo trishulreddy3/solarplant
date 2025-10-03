@@ -18,6 +18,7 @@ import ExistingUsers from "./pages/ExistingUsers";
 import AddUser from "./pages/AddUser";
 import CompanyMonitor from "./pages/CompanyMonitor";
 import PlantView from "./pages/PlantView";
+import AuthTest from "./pages/AuthTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,9 @@ const App = () => (
           
           {/* User Routes */}
           <Route path="/user-dashboard" element={<UserDashboard />} />
+          
+          {/* Debug Routes */}
+          <Route path="/auth-test" element={<AuthTest />} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
