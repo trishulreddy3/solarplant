@@ -38,24 +38,104 @@ const ViewTables = () => {
     return () => clearInterval(interval);
   }, [user, navigate]);
 
-  const loadData = () => {
+  const loadData = async () => {
     if (!user?.companyId) return;
     
-    // Migrate existing panels to new structure
-    migratePanels();
-    
-    const companyTables = getTablesByCompany(user.companyId);
-    setTables(companyTables);
+    try {
+      // Try to load from backend first
+      const { getAllCompanies, getPlantDetails } = await import('@/lib/realFileSystem');
+      const backendCompanies = await getAllCompanies();
+      const selectedCompany = backendCompanies.find(c => c.id === user.companyId);
+      
+      if (selectedCompany) {
+        // Load plant details from backend
+        const plantDetails = await getPlantDetails(user.companyId);
+        if (plantDetails) {
+          setTables(plantDetails.tables || []);
+          
+          // Generate panels from plant details
+          const generatedPanels: Panel[] = [];
+          plantDetails.tables.forEach((table: any) => {
+            // Top panels
+            for (let i = 0; i < table.panelsTop; i++) {
+              generatedPanels.push({
+                id: `${table.id}-top-${i}`,
+                tableId: table.id,
+                position: 'top',
+                panelIndex: i,
+                healthPercentage: Math.random() > 0.3 ? Math.floor(Math.random() * 40) + 60 : Math.floor(Math.random() * 40),
+                voltage: Math.random() > 0.2 ? (18 + Math.random() * 2) : (16 + Math.random()),
+                current: Math.random() > 0.2 ? (8.5 + Math.random()) : (7 + Math.random()),
+                power: 0,
+                temperature: 25 + Math.random() * 15,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+            }
+            
+            // Bottom panels
+            for (let i = 0; i < table.panelsBottom; i++) {
+              generatedPanels.push({
+                id: `${table.id}-bottom-${i}`,
+                tableId: table.id,
+                position: 'bottom',
+                panelIndex: i,
+                healthPercentage: Math.random() > 0.3 ? Math.floor(Math.random() * 40) + 60 : Math.floor(Math.random() * 40),
+                voltage: Math.random() > 0.2 ? (18 + Math.random() * 2) : (16 + Math.random()),
+                current: Math.random() > 0.2 ? (8.5 + Math.random()) : (7 + Math.random()),
+                power: 0,
+                temperature: 25 + Math.random() * 15,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+            }
+          });
+          
+          // Calculate power for each panel
+          generatedPanels.forEach(panel => {
+            panel.power = parseFloat((panel.voltage * panel.current).toFixed(2));
+          });
+          
+          setPanels(generatedPanels);
+        } else {
+          setTables([]);
+          setPanels([]);
+        }
+      } else {
+        // Fallback to localStorage
+        migratePanels();
+        
+        const companyTables = getTablesByCompany(user.companyId);
+        setTables(companyTables);
 
-    const companyPanels = getPanelsByCompany(user.companyId);
-    setPanels(companyPanels);
+        const companyPanels = getPanelsByCompany(user.companyId);
+        setPanels(companyPanels);
 
-    // Simulate data updates
-    companyPanels.forEach(panel => {
-      if (Math.random() > 0.7) {
-        updatePanelData(panel.id);
+        // Simulate data updates
+        companyPanels.forEach(panel => {
+          if (Math.random() > 0.7) {
+            updatePanelData(panel.id);
+          }
+        });
       }
-    });
+    } catch (error) {
+      console.error('Error loading plant details:', error);
+      // Fallback to localStorage
+      migratePanels();
+      
+      const companyTables = getTablesByCompany(user.companyId);
+      setTables(companyTables);
+
+      const companyPanels = getPanelsByCompany(user.companyId);
+      setPanels(companyPanels);
+
+      // Simulate data updates
+      companyPanels.forEach(panel => {
+        if (Math.random() > 0.7) {
+          updatePanelData(panel.id);
+        }
+      });
+    }
   };
 
   const getStatusIcon = (status: string) => {
