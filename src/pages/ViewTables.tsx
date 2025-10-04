@@ -62,12 +62,12 @@ const ViewTables = () => {
                 id: `${table.id || 'unknown'}-top-${i}`,
                 tableId: table.id || 'unknown',
                 companyId: user.companyId,
-                name: `T${table.id?.split('-')[1] || 'X'}.TOP.P${i + 1}`,
+                name: `P${i + 1}`,
                 position: 'top',
                 maxVoltage: 40,
                 maxCurrent: 10,
-                currentVoltage: Math.random() > 0.2 ? (18 + Math.random() * 2) : (16 + Math.random()),
-                currentCurrent: Math.random() > 0.2 ? (8.5 + Math.random()) : (7 + Math.random()),
+                currentVoltage: Math.round((35 + Math.random() * 5) * 10) / 10,
+                currentCurrent: Math.round((8 + Math.random() * 2) * 10) / 10,
                 powerGenerated: 0,
                 status: 'good',
                 lastUpdated: new Date().toISOString(),
@@ -80,12 +80,12 @@ const ViewTables = () => {
                 id: `${table.id || 'unknown'}-bottom-${i}`,
                 tableId: table.id || 'unknown',
                 companyId: user.companyId,
-                name: `T${table.id?.split('-')[1] || 'X'}.BOTTOM.P${i + 1}`,
+                name: `P${i + 1}`,
                 position: 'bottom',
                 maxVoltage: 40,
                 maxCurrent: 10,
-                currentVoltage: Math.random() > 0.2 ? (18 + Math.random() * 2) : (16 + Math.random()),
-                currentCurrent: Math.random() > 0.2 ? (8.5 + Math.random()) : (7 + Math.random()),
+                currentVoltage: Math.round((35 + Math.random() * 5) * 10) / 10,
+                currentCurrent: Math.round((8 + Math.random() * 2) * 10) / 10,
                 powerGenerated: 0,
                 status: 'good',
                 lastUpdated: new Date().toISOString(),
@@ -291,14 +291,14 @@ const ViewTables = () => {
       const tablePanels = panels.filter(p => p.tableId === table.id);
       const topPanels = tablePanels.filter(p => p.position === 'top').sort((a, b) => {
         if (!a.name || !b.name) return 0;
-        const aNum = parseInt(a.name.substring(a.name.lastIndexOf('P') + 1)) || 0;
-        const bNum = parseInt(b.name.substring(b.name.lastIndexOf('P') + 1)) || 0;
+        const aNum = parseInt(a.name.substring(1)) || 0;
+        const bNum = parseInt(b.name.substring(1)) || 0;
         return aNum - bNum;
       });
       const bottomPanels = tablePanels.filter(p => p.position === 'bottom').sort((a, b) => {
         if (!a.name || !b.name) return 0;
-        const aNum = parseInt(a.name.substring(a.name.lastIndexOf('P') + 1)) || 0;
-        const bNum = parseInt(b.name.substring(b.name.lastIndexOf('P') + 1)) || 0;
+        const aNum = parseInt(a.name.substring(1)) || 0;
+        const bNum = parseInt(b.name.substring(1)) || 0;
         return aNum - bNum;
       });
 
@@ -452,14 +452,14 @@ const ViewTables = () => {
           const tablePanels = panels.filter(p => p.tableId === table.id);
           const topPanels = tablePanels.filter(p => p.position === 'top').sort((a, b) => {
             if (!a.name || !b.name) return 0;
-            const aNum = parseInt(a.name.substring(a.name.lastIndexOf('P') + 1)) || 0;
-            const bNum = parseInt(b.name.substring(b.name.lastIndexOf('P') + 1)) || 0;
+            const aNum = parseInt(a.name.substring(1)) || 0;
+            const bNum = parseInt(b.name.substring(1)) || 0;
             return aNum - bNum;
           });
           const bottomPanels = tablePanels.filter(p => p.position === 'bottom').sort((a, b) => {
             if (!a.name || !b.name) return 0;
-            const aNum = parseInt(a.name.substring(a.name.lastIndexOf('P') + 1)) || 0;
-            const bNum = parseInt(b.name.substring(b.name.lastIndexOf('P') + 1)) || 0;
+            const aNum = parseInt(a.name.substring(1)) || 0;
+            const bNum = parseInt(b.name.substring(1)) || 0;
             return aNum - bNum;
           });
           
