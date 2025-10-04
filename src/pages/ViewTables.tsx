@@ -59,41 +59,43 @@ const ViewTables = () => {
             // Top panels
             for (let i = 0; i < table.panelsTop; i++) {
               generatedPanels.push({
-                id: `${table.id}-top-${i}`,
-                tableId: table.id,
+                id: `${table.id || 'unknown'}-top-${i}`,
+                tableId: table.id || 'unknown',
+                companyId: user.companyId,
+                name: `T${table.id?.split('-')[1] || 'X'}.TOP.P${i + 1}`,
                 position: 'top',
-                panelIndex: i,
-                healthPercentage: Math.random() > 0.3 ? Math.floor(Math.random() * 40) + 60 : Math.floor(Math.random() * 40),
-                voltage: Math.random() > 0.2 ? (18 + Math.random() * 2) : (16 + Math.random()),
-                current: Math.random() > 0.2 ? (8.5 + Math.random()) : (7 + Math.random()),
-                power: 0,
-                temperature: 25 + Math.random() * 15,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                maxVoltage: 40,
+                maxCurrent: 10,
+                currentVoltage: Math.random() > 0.2 ? (18 + Math.random() * 2) : (16 + Math.random()),
+                currentCurrent: Math.random() > 0.2 ? (8.5 + Math.random()) : (7 + Math.random()),
+                powerGenerated: 0,
+                status: 'good',
+                lastUpdated: new Date().toISOString(),
               });
             }
             
             // Bottom panels
             for (let i = 0; i < table.panelsBottom; i++) {
               generatedPanels.push({
-                id: `${table.id}-bottom-${i}`,
-                tableId: table.id,
+                id: `${table.id || 'unknown'}-bottom-${i}`,
+                tableId: table.id || 'unknown',
+                companyId: user.companyId,
+                name: `T${table.id?.split('-')[1] || 'X'}.BOTTOM.P${i + 1}`,
                 position: 'bottom',
-                panelIndex: i,
-                healthPercentage: Math.random() > 0.3 ? Math.floor(Math.random() * 40) + 60 : Math.floor(Math.random() * 40),
-                voltage: Math.random() > 0.2 ? (18 + Math.random() * 2) : (16 + Math.random()),
-                current: Math.random() > 0.2 ? (8.5 + Math.random()) : (7 + Math.random()),
-                power: 0,
-                temperature: 25 + Math.random() * 15,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                maxVoltage: 40,
+                maxCurrent: 10,
+                currentVoltage: Math.random() > 0.2 ? (18 + Math.random() * 2) : (16 + Math.random()),
+                currentCurrent: Math.random() > 0.2 ? (8.5 + Math.random()) : (7 + Math.random()),
+                powerGenerated: 0,
+                status: 'good',
+                lastUpdated: new Date().toISOString(),
               });
             }
           });
           
           // Calculate power for each panel
           generatedPanels.forEach(panel => {
-            panel.power = parseFloat((panel.voltage * panel.current).toFixed(2));
+            panel.powerGenerated = parseFloat((panel.currentVoltage * panel.currentCurrent).toFixed(2));
           });
           
           setPanels(generatedPanels);
@@ -287,8 +289,18 @@ const ViewTables = () => {
 
     tables.forEach(table => {
       const tablePanels = panels.filter(p => p.tableId === table.id);
-      const topPanels = tablePanels.filter(p => p.position === 'top').sort((a, b) => parseInt(a.name.substring(1)) - parseInt(b.name.substring(1)));
-      const bottomPanels = tablePanels.filter(p => p.position === 'bottom').sort((a, b) => parseInt(a.name.substring(1)) - parseInt(b.name.substring(1)));
+      const topPanels = tablePanels.filter(p => p.position === 'top').sort((a, b) => {
+        if (!a.name || !b.name) return 0;
+        const aNum = parseInt(a.name.substring(a.name.lastIndexOf('P') + 1)) || 0;
+        const bNum = parseInt(b.name.substring(b.name.lastIndexOf('P') + 1)) || 0;
+        return aNum - bNum;
+      });
+      const bottomPanels = tablePanels.filter(p => p.position === 'bottom').sort((a, b) => {
+        if (!a.name || !b.name) return 0;
+        const aNum = parseInt(a.name.substring(a.name.lastIndexOf('P') + 1)) || 0;
+        const bNum = parseInt(b.name.substring(b.name.lastIndexOf('P') + 1)) || 0;
+        return aNum - bNum;
+      });
 
       // Extract table number from serial number (e.g., "TBL-0001" -> "1")
       const tableNumber = table.serialNumber.split('-')[1] ? parseInt(table.serialNumber.split('-')[1]) : 1;
@@ -438,8 +450,18 @@ const ViewTables = () => {
         {/* Tables and Panels */}
         {tables.map((table) => {
           const tablePanels = panels.filter(p => p.tableId === table.id);
-          const topPanels = tablePanels.filter(p => p.position === 'top').sort((a, b) => parseInt(a.name.substring(1)) - parseInt(b.name.substring(1)));
-          const bottomPanels = tablePanels.filter(p => p.position === 'bottom').sort((a, b) => parseInt(a.name.substring(1)) - parseInt(b.name.substring(1)));
+          const topPanels = tablePanels.filter(p => p.position === 'top').sort((a, b) => {
+            if (!a.name || !b.name) return 0;
+            const aNum = parseInt(a.name.substring(a.name.lastIndexOf('P') + 1)) || 0;
+            const bNum = parseInt(b.name.substring(b.name.lastIndexOf('P') + 1)) || 0;
+            return aNum - bNum;
+          });
+          const bottomPanels = tablePanels.filter(p => p.position === 'bottom').sort((a, b) => {
+            if (!a.name || !b.name) return 0;
+            const aNum = parseInt(a.name.substring(a.name.lastIndexOf('P') + 1)) || 0;
+            const bNum = parseInt(b.name.substring(b.name.lastIndexOf('P') + 1)) || 0;
+            return aNum - bNum;
+          });
           
           return (
             <Card key={table.id} className="glass-card">
