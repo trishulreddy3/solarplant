@@ -520,24 +520,30 @@ const ViewTables = () => {
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-0.5">
+                  <div className="flex flex-wrap gap-1">
                     {topPanels.map((panel) => (
                       <div
                         key={panel.id}
-                        className={`relative transition-all hover:scale-105 cursor-pointer ${
+                        className={`relative transition-all hover:scale-105 cursor-pointer rounded-md border border-gray-300 bg-white shadow-sm ${
                           editingTableId === table.id ? 'ring-2 ring-red-500 ring-opacity-50' : ''
-                        }`}
+                        } ${panel.status === 'fault' ? 'bg-red-100 border-red-300' : ''}`}
                         onClick={() => handlePanelClick(panel, table.id)}
+                        style={{
+                          width: '32px',
+                          height: '40px',
+                          borderRadius: '6px'
+                        }}
                       >
                         <img
                           src={getPanelImage(panel)}
                           alt={`Panel ${panel.name} - Health ${getPanelHealthPercentage(panel)}%`}
-                          className="w-20 h-16 object-contain"
+                          className="w-full h-full object-cover"
+                          style={{ borderRadius: '4px' }}
                         />
                         {/* Edit mode indicator */}
                         {editingTableId === table.id && (
-                          <div className="absolute bottom-1 right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
-                            <Trash2 className="h-3 w-3" />
+                          <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs p-0.5 rounded-full">
+                            <Trash2 className="h-2 w-2" />
                           </div>
                         )}
                       </div>
@@ -546,7 +552,9 @@ const ViewTables = () => {
                 </div>
 
                 {/* Separator Line */}
-                <div className="border-t border-border/50 my-4"></div>
+                <div className="relative my-4">
+                  <div className="h-px bg-blue-300"></div>
+                </div>
 
                 {/* Bottom Panels Row */}
                 <div>
@@ -558,24 +566,30 @@ const ViewTables = () => {
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-0.5">
+                  <div className="flex flex-wrap gap-1">
                     {bottomPanels.map((panel) => (
                       <div
                         key={panel.id}
-                        className={`relative transition-all hover:scale-105 cursor-pointer ${
+                        className={`relative transition-all hover:scale-105 cursor-pointer rounded-md border border-gray-300 bg-white shadow-sm ${
                           editingTableId === table.id ? 'ring-2 ring-red-500 ring-opacity-50' : ''
-                        }`}
+                        } ${panel.status === 'fault' ? 'bg-red-100 border-red-300' : ''}`}
                         onClick={() => handlePanelClick(panel, table.id)}
+                        style={{
+                          width: '32px',
+                          height: '40px',
+                          borderRadius: '6px'
+                        }}
                       >
                         <img
                           src={getPanelImage(panel)}
                           alt={`Panel ${panel.name} - Health ${getPanelHealthPercentage(panel)}%`}
-                          className="w-20 h-16 object-contain"
+                          className="w-full h-full object-cover"
+                          style={{ borderRadius: '4px' }}
                         />
                         {/* Edit mode indicator */}
                         {editingTableId === table.id && (
-                          <div className="absolute bottom-1 right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
-                            <Trash2 className="h-3 w-3" />
+                          <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs p-0.5 rounded-full">
+                            <Trash2 className="h-2 w-2" />
                           </div>
                         )}
                       </div>
