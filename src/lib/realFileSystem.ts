@@ -1,7 +1,30 @@
 // Real file system operations using backend API
 // This creates actual physical folders and files on the system
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+// Determine API base URL based on environment
+const getApiBaseUrl = () => {
+  // Check if we're in development mode
+  if (import.meta.env.DEV) {
+    return 'http://localhost:5000/api';
+  }
+  
+  // Check for custom API URL from environment
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // Default to localhost for development
+  return 'http://localhost:5000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Debug logging
+console.log('🔧 API Configuration:', {
+  isDev: import.meta.env.DEV,
+  viteApiBaseUrl: import.meta.env.VITE_API_BASE_URL,
+  resolvedApiBaseUrl: API_BASE_URL
+});
 
 export interface CompanyFolder {
   id: string;
@@ -227,7 +250,7 @@ export const getPanelStatus = (healthPercentage: number): 'good' | 'average' | '
 
 export const deletePanel = async (companyId: string, panelId: string): Promise<boolean> => {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const API_BASE_URL = getApiBaseUrl();
     
     // Extract tableId from panelId (format: tableId-position-index)
     const tableId = panelId.split('-').slice(0, -2).join('-');
@@ -253,7 +276,7 @@ export const deletePanel = async (companyId: string, panelId: string): Promise<b
 
 export const refreshPanelData = async (companyId: string): Promise<boolean> => {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const API_BASE_URL = getApiBaseUrl();
     
     const response = await fetch(`${API_BASE_URL}/companies/${companyId}/refresh-panel-data`, {
       method: 'PUT',
