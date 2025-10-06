@@ -31,6 +31,25 @@ console.log('🔧 API Configuration:', {
   resolvedApiBaseUrl: API_BASE_URL
 });
 
+// Circuit breaker to prevent infinite retries
+const failedRequests = new Set<string>();
+const MAX_FAILED_ATTEMPTS = 3;
+
+// Helper function to check if a request should be skipped
+const shouldSkipRequest = (endpoint: string): boolean => {
+  return failedRequests.has(endpoint) && failedRequests.size >= MAX_FAILED_ATTEMPTS;
+};
+
+// Helper function to mark request as failed
+const markRequestFailed = (endpoint: string): void => {
+  failedRequests.add(endpoint);
+};
+
+// Helper function to mark request as successful
+const markRequestSuccess = (endpoint: string): void => {
+  failedRequests.delete(endpoint);
+};
+
 export interface CompanyFolder {
   id: string;
   name: string;
@@ -88,31 +107,51 @@ export interface PlantTable {
   };
 }
 
-// API helper function
+// API helper function with timeout
 async function apiCall(endpoint: string, options: RequestInit = {}) {
   try {
+    // Check circuit breaker
+    if (shouldSkipRequest(endpoint)) {
+      console.warn(`🚫 Skipping request to ${endpoint} due to circuit breaker`);
+      throw new Error(`Request skipped due to circuit breaker: ${endpoint}`);
+    }
+
     const url = `${API_BASE_URL}${endpoint}`;
     console.log('🌐 Making API call to:', url);
+    
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
+      signal: controller.signal,
       ...options,
     });
 
+    clearTimeout(timeoutId);
     console.log('📡 API response status:', response.status, response.statusText);
 
     if (!response.ok) {
+      markRequestFailed(endpoint);
       throw new Error(`API call failed: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     console.log('📦 API response data:', data);
+    
+    // Mark as successful to reset circuit breaker
+    markRequestSuccess(endpoint);
     return data;
   } catch (error) {
     console.error('❌ API call error:', error);
+    if (error.name === 'AbortError') {
+      console.error('⏰ Request timed out');
+      markRequestFailed(endpoint);
+    }
     throw error;
   }
 }
@@ -183,8 +222,14 @@ export const addUserToCompany = async (
 };
 
 // Get plant details for a company
-export const getPlantDetails = async (companyId: string): Promise<PlantDetails> => {
-  return await apiCall(`/companies/${companyId}`);
+export const getPlantDetails = async (companyId: string): Promise<PlantDetails | null> => {
+  try {
+    return await apiCall(`/companies/${companyId}`);
+  } catch (error) {
+    console.error(`Error loading plant details for company ${companyId}:`, error);
+    // Return null instead of throwing to prevent infinite loops
+    return null;
+  }
 };
 
 // Get users for a company

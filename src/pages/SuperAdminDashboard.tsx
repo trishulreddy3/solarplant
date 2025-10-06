@@ -47,7 +47,12 @@ const SuperAdminDashboard = () => {
           for (const company of fileSystemCompanies) {
             try {
               const plantDetails = await getPlantDetails(company.id);
-              tableCounts[company.id] = plantDetails?.tables?.length || 0;
+              if (plantDetails) {
+                tableCounts[company.id] = plantDetails.tables?.length || 0;
+              } else {
+                // Plant details not found - set to 0
+                tableCounts[company.id] = 0;
+              }
             } catch (error) {
               console.error(`Error loading plant details for ${company.id}:`, error);
               // Don't retry failed requests - set to 0 and continue
