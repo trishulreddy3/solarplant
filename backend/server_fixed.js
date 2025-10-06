@@ -80,28 +80,25 @@ const generatePanelData = (panelCount, voltagePerPanel, currentPerPanel, existin
         }
       }
       
-          // Simulate repair process ONLY for the actual faulty panel
-          if (i === actualFaultyIndex && currentHealth < 80) {
-            if (currentState === 'fault' && currentHealth < 20) {
-              // Gradually repair fault panels (increase health by 2-5% per cycle)
-              currentHealth += 2 + Math.random() * 3;
-            } else if (currentState === 'repairing' && currentHealth >= 20 && currentHealth < 80) {
-              // Gradually repair repairing panels (increase health by 3-7% per cycle)
-              currentHealth += 3 + Math.random() * 4;
-            }
-            
-            // Determine state based on current health
-            if (currentHealth < 20) {
-              currentState = 'fault';
-            } else if (currentHealth < 80) {
-              currentState = 'repairing';
-            } else {
-              currentState = 'good';
-            }
-          } else if (currentState === 'good' && currentHealth >= 80) {
-            // Maintain good condition with slight variations for healthy panels
-            currentHealth = Math.max(80, Math.min(100, currentHealth + (Math.random() - 0.5) * 2));
+      // Simulate repair process ONLY for the actual faulty panel
+      if (i === actualFaultyIndex && currentHealth < 80) {
+        if (currentState === 'fault' && currentHealth < 20) {
+          // Gradually repair fault panels (increase health by 2-5% per cycle)
+          currentHealth += 2 + Math.random() * 3;
+          if (currentHealth >= 20) {
+            currentState = 'repairing';
           }
+        } else if (currentState === 'repairing' && currentHealth < 80) {
+          // Gradually repair repairing panels (increase health by 3-7% per cycle)
+          currentHealth += 3 + Math.random() * 4;
+          if (currentHealth >= 80) {
+            currentState = 'good';
+          }
+        }
+      } else if (currentState === 'good' && currentHealth >= 80) {
+        // Maintain good condition with slight variations for healthy panels
+        currentHealth = Math.max(80, Math.min(100, currentHealth + (Math.random() - 0.5) * 2));
+      }
       
       panelHealth.push(Math.round(currentHealth * 10) / 10);
       panelStates.push(currentState);
@@ -171,10 +168,13 @@ const generatePanelData = (panelCount, voltagePerPanel, currentPerPanel, existin
     current.push(actualCurrent);
     power.push(actualPower);
     
-    // Apply series connection logic - all panels FROM the faulty panel onwards show the same visual state
-    if (actualFaultyIndex !== null && i >= actualFaultyIndex) {
-      // Update visual state for all panels from faulty panel onwards
-      panelStates[i] = panelStates[actualFaultyIndex];
+    // Update panel state for series connection display - all FROM the faulty panel onwards show the same state
+    if (i >= actualFaultyIndex && actualFaultyIndex !== -1 && weakestHealth < 80) {
+      // Only update visual state, not the actual health values
+      if (i !== actualFaultyIndex) {
+        // These panels are visually affected but don't need repair
+        panelStates[i] = panelStates[actualFaultyIndex];
+      }
     }
   }
   
@@ -265,55 +265,12 @@ app.get('/api/companies/:companyId/users', async (req, res) => {
     const usersPath = path.join(COMPANIES_DIR, companyId, 'users.json');
     
     const usersData = await fs.readFile(usersPath, 'utf8');
-    // Add better error handling for JSON parsing
-    const users = JSON.parse(usersData.trim());
+    const users = JSON.parse(usersData);
     
     res.json(users);
   } catch (error) {
     console.error('Error reading users:', error);
-    // Return empty array if users.json is corrupted instead of 500 error
-    res.json([]);
-  }
-});
-
-// Add user to company
-app.post('/api/companies/:companyId/users', async (req, res) => {
-  try {
-    const { companyId } = req.params;
-    const { email, password, role, createdBy } = req.body;
-    
-    const usersPath = path.join(COMPANIES_DIR, companyId, 'users.json');
-    
-    // Read existing users
-    let users = [];
-    try {
-      const usersData = await fs.readFile(usersPath, 'utf8');
-      users = JSON.parse(usersData.trim());
-    } catch (error) {
-      // If users.json doesn't exist or is corrupted, start with empty array
-      users = [];
-    }
-    
-    // Create new user
-    const newUser = {
-      id: `user-${Date.now()}`,
-      email,
-      password,
-      role,
-      createdAt: new Date().toISOString(),
-      createdBy: createdBy || 'super_admin'
-    };
-    
-    // Add user to array
-    users.push(newUser);
-    
-    // Write back to file
-    await fs.writeFile(usersPath, JSON.stringify(users, null, 2));
-    
-    res.json({ success: true, user: newUser });
-  } catch (error) {
-    console.error('Error adding user:', error);
-    res.status(500).json({ error: 'Failed to add user' });
+    res.status(500).json({ error: 'Failed to read users' });
   }
 });
 
@@ -412,7 +369,7 @@ app.delete('/api/companies/:companyId/tables/:tableId/panels/:panelId', async (r
       table.bottomPanels.voltage.splice(panelIndex, 1);
       table.bottomPanels.current.splice(panelIndex, 1);
       table.bottomPanels.power.splice(panelIndex, 1);
-      if (table.bottomPanels.health) table.bottomPanels.health.splice(panelIndex, 1);
+      if (table.bottomPanels.health) table.bottomPanELS.health.splice(panelIndex, 1);
       if (table.bottomPanels.states) table.bottomPanels.states.splice(panelIndex, 1);
       table.panelsBottom -= 1;
     } else {
@@ -471,7 +428,7 @@ app.put('/api/companies/:companyId/refresh-panel-data', async (req, res) => {
       }
     });
     
-    plantDetails.lastUpdated = new Date().toISOString();
+    plantDetails.lastUpdated = new Date().toISOISOString();
     
     // Save updated data
     await fs.writeFile(plantDetailsPath, JSON.stringify(plantDetails, null, 2));
@@ -489,113 +446,6 @@ app.put('/api/companies/:companyId/refresh-panel-data', async (req, res) => {
   }
 });
 
-// Add panels to existing table
-app.post('/api/companies/:companyId/tables/:tableId/add-panels', async (req, res) => {
-  try {
-    const { companyId, tableId } = req.params;
-    const { position, panelCount } = req.body; // position: 'top' or 'bottom', panelCount: number
-    
-    const companyPath = path.join(COMPANIES_DIR, companyId);
-    const plantDetailsPath = path.join(companyPath, 'plant_details.json');
-    
-    // Read current plant details
-    const plantDetailsData = await fs.readFile(plantDetailsPath, 'utf8');
-    const plantDetails = JSON.parse(plantDetailsData);
-    
-    // Find the table
-    const table = plantDetails.tables.find(t => t.id === tableId);
-    if (!table) {
-      return res.status(404).json({ error: 'Table not found' });
-    }
-    
-    // Generate new panel data for the additional panels
-    const newPanelData = generatePanelData(panelCount, plantDetails.voltagePerPanel, plantDetails.currentPerPanel);
-    
-    if (position === 'top') {
-      // Add to top panels
-      table.panelsTop += panelCount;
-      
-      // Merge new panel data with existing top panels
-      if (table.topPanels) {
-        // Extend existing arrays
-        Object.keys(newPanelData).forEach(key => {
-          if (Array.isArray(table.topPanels[key])) {
-            table.topPanels[key] = [...table.topPanels[key], ...newPanelData[key]];
-          } else {
-            table.topPanels[key] = newPanelData[key];
-          }
-        });
-      } else {
-        table.topPanels = newPanelData;
-      }
-    } else if (position === 'bottom') {
-      // Add to bottom panels
-      table.panelsBottom += panelCount;
-      
-      // Merge new panel data with existing bottom panels
-      if (table.bottomPanels) {
-        // Extend existing arrays
-        Object.keys(newPanelData).forEach(key => {
-          if (Array.isArray(table.bottomPanels[key])) {
-            table.bottomPanels[key] = [...table.bottomPanels[key], ...newPanelData[key]];
-          } else {
-            table.bottomPanels[key] = newPanelData[key];
-          }
-        });
-      } else {
-        table.bottomPanels = newPanelData;
-      }
-    }
-    
-    plantDetails.lastUpdated = new Date().toISOString();
-    
-    // Save updated plant details
-    await fs.writeFile(plantDetailsPath, JSON.stringify(plantDetails, null, 2));
-    
-    res.json({ 
-      success: true, 
-      message: `${panelCount} panel(s) added to ${position} side`,
-      tableId: table.id,
-      position,
-      panelCount,
-      updatedAt: plantDetails.lastUpdated
-    });
-  } catch (error) {
-    console.error('Error adding panels:', error);
-    res.status(500).json({ error: 'Failed to add panels' });
-  }
-});
-
-// Password verification endpoint for 2FA delete confirmation
-app.post('/api/verify-super-admin-password', async (req, res) => {
-  try {
-    const { password } = req.body;
-    
-    if (!password) {
-      return res.status(400).json({ error: 'Password is required' });
-    }
-    
-    // For now, using a simple password check
-    // In production, this should be hashed and stored securely
-    const correctPassword = 'super_admin_password';
-    
-    if (password === correctPassword) {
-      res.json({ 
-        success: true, 
-        message: 'Password verified successfully' 
-      });
-    } else {
-      res.status(401).json({ 
-        success: false, 
-        error: 'Invalid password' 
-      });
-    }
-  } catch (error) {
-    console.error('Error verifying password:', error);
-    res.status(500).json({ error: 'Failed to verify password' });
-  }
-});
-
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`File system server running on port ${PORT}`);
@@ -603,3 +453,4 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✅ PROPER series connection simulation active!`);
 });
+

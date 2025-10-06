@@ -149,7 +149,7 @@ export const addUserToCompany = async (
 
 // Get plant details for a company
 export const getPlantDetails = async (companyId: string): Promise<PlantDetails> => {
-  return await apiCall(`/companies/${companyId}/plant-details`);
+  return await apiCall(`/companies/${companyId}`);
 };
 
 // Get users for a company
@@ -201,5 +201,78 @@ export const getPanelStatus = (healthPercentage: number): 'good' | 'average' | '
   if (healthPercentage >= 100) return 'good';
   if (healthPercentage >= 50) return 'average';
   return 'fault';
+};
+
+export const deletePanel = async (companyId: string, panelId: string): Promise<boolean> => {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    
+    // Extract tableId from panelId (format: tableId-position-index)
+    const tableId = panelId.split('-').slice(0, -2).join('-');
+    
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/tables/${tableId}/panels/${panelId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete panel: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result.success;
+  } catch (error) {
+    console.error('Error deleting panel:', error);
+    return false;
+  }
+};
+
+export const refreshPanelData = async (companyId: string): Promise<boolean> => {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/refresh-panel-data`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to refresh panel data: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result.success;
+  } catch (error) {
+    console.error('Error refreshing panel data:', error);
+    return false;
+  }
+};
+
+// Add panels to existing table
+export const addPanels = async (companyId: string, tableId: string, position: 'top' | 'bottom', panelCount: number): Promise<boolean> => {
+  try {
+    const response = await apiCall(`/companies/${companyId}/tables/${tableId}/add-panels`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ position, panelCount }),
+    });
+
+    if (response.success) {
+      console.log(`✅ Added ${panelCount} panel(s) to ${position} side of table ${tableId}`);
+      return true;
+    } else {
+      console.error('Failed to add panels:', response.error);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error adding panels:', error);
+    return false;
+  }
 };
 

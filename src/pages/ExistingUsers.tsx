@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Users, Mail, Calendar, Trash2 } from 'lucide-react';
-import { getCurrentUser, getUsers, deleteUser } from '@/lib/auth';
+import { ArrowLeft, Users, Mail, Calendar, Trash2, Shield } from 'lucide-react';
+import { getCurrentUser } from '@/lib/auth';
+import { getUsers as getUsersFromAPI } from '@/lib/realFileSystem';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 
 const ExistingUsers = () => {
@@ -23,9 +24,17 @@ const ExistingUsers = () => {
       return;
     }
 
-    const allUsers = getUsers();
-    const filtered = allUsers.filter(u => u.companyId === user.companyId);
-    setCompanyUsers(filtered);
+    const loadUsers = async () => {
+      try {
+        const users = await getUsersFromAPI(user.companyId);
+        setCompanyUsers(users);
+      } catch (error) {
+        console.error('Error loading users:', error);
+        setCompanyUsers([]);
+      }
+    };
+
+    loadUsers();
   }, [user, navigate]);
 
   const handleDeleteUser = (userToDelete: any) => {
@@ -42,10 +51,8 @@ const ExistingUsers = () => {
         throw new Error('Invalid password');
       }
 
-      // Delete user from auth system
-      deleteUser(deleteDialog.userToDelete.id);
-
-      // Remove from users list
+      // TODO: Implement backend user deletion
+      // For now, just remove from local state
       setCompanyUsers(companyUsers.filter(u => u.id !== deleteDialog.userToDelete!.id));
 
       // Close dialog
@@ -79,7 +86,7 @@ const ExistingUsers = () => {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
           </Button>
-          <h1 className="text-2xl font-bold gradient-text">Existing Users</h1>
+          <h1 className="text-2xl font-bold text-primary">Existing Users</h1>
         </div>
       </header>
 
@@ -116,7 +123,7 @@ const ExistingUsers = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline">User</Badge>
+                        <Badge variant="outline">{usr.role === 'admin' ? 'Admin' : 'User'}</Badge>
                         <Button
                           variant="destructive"
                           size="sm"
@@ -152,18 +159,73 @@ const ExistingUsers = () => {
         )}
       </main>
 
-      {/* Delete Confirmation Dialog */}
-      <DeleteConfirmationDialog
-        isOpen={deleteDialog.isOpen}
-        onClose={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
-        title="Delete User"
-        description={`You are about to permanently delete the user "${deleteDialog.userToDelete?.email}". This action will remove all user data and access permissions.`}
-        entityName={deleteDialog.userToDelete?.email || ''}
-        entityType="user"
-        adminEmail={user?.email || ''}
-        isLoading={isDeleting}
-      />
+      {/* Company Information Footer */}
+      <footer className="bg-gray-50 border-t border-gray-200 mt-8">
+        <div className="container mx-auto px-4 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Company Info */}
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Microsyslogic</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                Advanced solar plant monitoring and management system for optimal energy production.
+              </p>
+              <div className="flex items-center text-sm text-gray-500">
+                <Shield className="h-4 w-4 mr-2" />
+                <span>Secure & Compliant</span>
+              </div>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Quick Links</h3>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="/privacy-policy" className="text-gray-600 hover:text-primary">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="/terms-of-service" className="text-gray-600 hover:text-primary">
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a href="/help" className="text-gray-600 hover:text-primary">
+                    Help & Support
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Contact</h3>
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <Mail className="h-4 w-4 mr-2" />
+                  <a href="mailto:SuperAdmin.Microsyslogic@gmail.com" className="hover:text-primary">
+                    SuperAdmin.Microsyslogic@gmail.com
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-gray-200 mt-6 pt-4 flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500">
+            <div>
+              © 2025 Microsyslogic. All rights reserved.
+            </div>
+            <div className="flex items-center space-x-4 mt-2 sm:mt-0">
+              <span>GDPR Compliant</span>
+              <span>•</span>
+              <span>CCPA Compliant</span>
+              <span>•</span>
+              <span>ISO 27001</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

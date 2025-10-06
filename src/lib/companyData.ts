@@ -77,13 +77,13 @@ export const generatePanelData = (
 
 // Get company data from localStorage
 export const getCompanyData = (companyId: string): CompanyData | null => {
-  const dataJson = localStorage.getItem(`company_${companyId}`);
-  return dataJson ? JSON.parse(dataJson) : null;
+  console.warn('getCompanyData() is deprecated. Use backend API instead.');
+  return null;
 };
 
 // Save company data to localStorage
 export const saveCompanyData = (companyData: CompanyData) => {
-  localStorage.setItem(`company_${companyData.id}`, JSON.stringify(companyData));
+  console.warn('saveCompanyData() is deprecated. Use backend API instead.');
 };
 
 // Create new company data structure
@@ -187,16 +187,8 @@ export const addUserToCompany = (
 export const getAllCompaniesData = (): CompanyData[] => {
   const companies: CompanyData[] = [];
   
-  // Get all localStorage keys that start with 'company_'
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('company_')) {
-      const dataJson = localStorage.getItem(key);
-      if (dataJson) {
-        companies.push(JSON.parse(dataJson));
-      }
-    }
-  }
+  // Company data now loaded from backend API
+  console.warn('getAllCompaniesData() is deprecated. Use backend API instead.');
   
   return companies;
 };

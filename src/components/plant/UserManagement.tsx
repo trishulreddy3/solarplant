@@ -42,10 +42,16 @@ const UserManagement = ({ onBack, initialView = 'list' }: UserManagementProps) =
     loadUsers();
   }, [user?.companyName]);
 
-  const loadUsers = () => {
-    const savedUsers = localStorage.getItem(`users-${user?.companyName}`);
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
+  const loadUsers = async () => {
+    try {
+      const { getUsers } = await import('@/lib/realFileSystem');
+      if (user?.companyId) {
+        const backendUsers = await getUsers(user.companyId);
+        setUsers(backendUsers);
+      }
+    } catch (error) {
+      console.error('Error loading users from backend:', error);
+      setUsers([]);
     }
   };
 
@@ -77,7 +83,7 @@ const UserManagement = ({ onBack, initialView = 'list' }: UserManagementProps) =
 
     const updatedUsers = [...users, userData];
     setUsers(updatedUsers);
-    localStorage.setItem(`users-${user?.companyName}`, JSON.stringify(updatedUsers));
+    // User saving now handled by backend API
 
     toast.success(
       <div>

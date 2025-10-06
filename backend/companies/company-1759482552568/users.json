@@ -6,5 +6,14 @@
     "role": "admin",
     "createdAt": "2025-10-03T09:09:13.017Z",
     "createdBy": "super_admin"
+  },
+  {
+    "id": "user-1759582288486",
+    "email": "user3@gmail.com",
+    "password": "Cpo0WvZe",
+    "role": "user",
+    "createdAt": "2025-10-04T12:51:28.486Z",
+    "createdBy": "harsha@gmail.com"
   }
 ]
+

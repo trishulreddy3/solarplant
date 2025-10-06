@@ -31,16 +31,63 @@ const SUPER_ADMIN = {
   companyName: 'Microsyslogic',
 };
 
+// Session-based user management with persistent storage
+let currentUser: User | null = null;
+
+// Load user from localStorage on initialization
+const loadStoredUser = (): User | null => {
+  try {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      // Check if the stored user is still valid (not expired)
+      const now = new Date().getTime();
+      const storedTime = new Date(user.loginTime).getTime();
+      const hoursSinceLogin = (now - storedTime) / (1000 * 60 * 60);
+      
+      // If login was more than 24 hours ago, consider it expired
+      if (hoursSinceLogin > 24) {
+        localStorage.removeItem('currentUser');
+        return null;
+      }
+      
+      return user;
+    }
+  } catch (error) {
+    console.error('Error loading stored user:', error);
+    localStorage.removeItem('currentUser');
+  }
+  return null;
+};
+
+// Initialize with stored user
+currentUser = loadStoredUser();
+
 export const getCurrentUser = (): User | null => {
-  const userJson = localStorage.getItem('currentUser');
-  return userJson ? JSON.parse(userJson) : null;
+  return currentUser;
 };
 
 export const setCurrentUser = (user: User | null) => {
+  currentUser = user;
+  
   if (user) {
-    localStorage.setItem('currentUser', JSON.stringify(user));
+    // Add login timestamp
+    const userWithTimestamp = {
+      ...user,
+      loginTime: new Date().toISOString()
+    };
+    
+    // Store user in localStorage for persistence
+    localStorage.setItem('currentUser', JSON.stringify(userWithTimestamp));
+    
+    // Also set a secure cookie for additional security
+    const cookieExpiry = new Date();
+    cookieExpiry.setTime(cookieExpiry.getTime() + (24 * 60 * 60 * 1000)); // 24 hours
+    document.cookie = `auth_token=${user.id};expires=${cookieExpiry.toUTCString()};path=/;secure;samesite=strict`;
   } else {
+    // Clear stored data on logout
     localStorage.removeItem('currentUser');
+    document.cookie = 'auth_token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;';
   }
 };
 
@@ -99,11 +146,8 @@ const checkBackendCredentials = async (email: string, password: string): Promise
 
 export const login = async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
   try {
-    console.log(`🚀 Starting login process for: ${email}`);
-    
     // Check Super Admin (hardcoded)
     if (email === SUPER_ADMIN.email && password === SUPER_ADMIN.password) {
-      console.log('✅ Super admin login successful');
       const user: User = {
         id: 'super-admin-1',
         email: SUPER_ADMIN.email,
@@ -116,17 +160,13 @@ export const login = async (email: string, password: string): Promise<{ success:
     }
 
     // Check backend credentials first
-    console.log('🔍 Checking backend credentials...');
     const backendResult = await checkBackendCredentials(email, password);
     if (backendResult.success) {
-      console.log('✅ Backend authentication successful');
       setCurrentUser(backendResult.user);
       return { success: true, user: backendResult.user };
     }
-    console.log('❌ Backend authentication failed:', backendResult.error);
 
     // Skip localStorage fallback - only use backend authentication
-    console.log('❌ Backend authentication failed, not falling back to localStorage');
     return { success: false, error: 'Invalid credentials' };
   } catch (error) {
     console.error('❌ Login error:', error);
@@ -135,29 +175,73 @@ export const login = async (email: string, password: string): Promise<{ success:
 };
 
 export const logout = () => {
-  setCurrentUser(null);
+  clearAllStoredData();
+  currentUser = null;
+};
+
+// Check if user is already logged in (for auto-login)
+export const isLoggedIn = (): boolean => {
+  return currentUser !== null;
+};
+
+// Get stored credentials for auto-fill (optional)
+export const getStoredCredentials = (): { email: string; password: string } | null => {
+  try {
+    const stored = localStorage.getItem('rememberedCredentials');
+    console.log('🔐 Remember Me: Loading stored credentials:', stored ? 'Found' : 'Not found');
+    if (stored) {
+      const credentials = JSON.parse(stored);
+      console.log('🔐 Remember Me: Loaded credentials for:', credentials.email);
+      return credentials;
+    }
+  } catch (error) {
+    console.error('Error loading stored credentials:', error);
+  }
+  return null;
+};
+
+// Store credentials for auto-fill (optional - user choice)
+export const storeCredentials = (email: string, password: string, remember: boolean) => {
+  console.log('🔐 Remember Me: Storing credentials:', { email, remember });
+  if (remember) {
+    try {
+      localStorage.setItem('rememberedCredentials', JSON.stringify({ email, password }));
+      console.log('🔐 Remember Me: Credentials stored successfully');
+    } catch (error) {
+      console.error('Error storing credentials:', error);
+    }
+  } else {
+    localStorage.removeItem('rememberedCredentials');
+    console.log('🔐 Remember Me: Credentials removed');
+  }
+};
+
+// Clear all stored data (for logout)
+export const clearAllStoredData = () => {
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('rememberedCredentials');
+  document.cookie = 'auth_token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;';
 };
 
 // Company management
+// Company management now handled by backend API
+// These functions are deprecated - use realFileSystem.ts instead
 export const getCompanies = (): Company[] => {
-  const companiesJson = localStorage.getItem('companies');
-  return companiesJson ? JSON.parse(companiesJson) : [];
+  console.warn('getCompanies() is deprecated. Use getAllCompanies() from realFileSystem.ts instead.');
+  return [];
 };
 
 export const saveCompanies = (companies: Company[]) => {
-  localStorage.setItem('companies', JSON.stringify(companies));
+  console.warn('saveCompanies() is deprecated. Companies are managed by backend API.');
 };
 
 export const addCompany = (company: Omit<Company, 'id' | 'createdAt'>): Company => {
-  const companies = getCompanies();
-  const newCompany: Company = {
+  console.warn('addCompany() is deprecated. Use backend API instead.');
+  return {
     ...company,
     id: `company-${Date.now()}`,
     createdAt: new Date().toISOString(),
   };
-  companies.push(newCompany);
-  saveCompanies(companies);
-  return newCompany;
 };
 
 // Plant Admin management
@@ -169,27 +253,26 @@ interface PlantAdmin {
   createdAt: string;
 }
 
+// Plant Admin and User management now handled by backend API
+// These functions are deprecated - use realFileSystem.ts instead
 export const getPlantAdmins = (): PlantAdmin[] => {
-  const adminsJson = localStorage.getItem('plantAdmins');
-  return adminsJson ? JSON.parse(adminsJson) : [];
+  console.warn('getPlantAdmins() is deprecated. Use backend API instead.');
+  return [];
 };
 
 export const savePlantAdmins = (admins: PlantAdmin[]) => {
-  localStorage.setItem('plantAdmins', JSON.stringify(admins));
+  console.warn('savePlantAdmins() is deprecated. Use backend API instead.');
 };
 
 export const addPlantAdmin = (email: string, password: string, companyId: string): PlantAdmin => {
-  const admins = getPlantAdmins();
-  const newAdmin: PlantAdmin = {
+  console.warn('addPlantAdmin() is deprecated. Use backend API instead.');
+  return {
     id: `admin-${Date.now()}`,
     email,
     password,
     companyId,
     createdAt: new Date().toISOString(),
   };
-  admins.push(newAdmin);
-  savePlantAdmins(admins);
-  return newAdmin;
 };
 
 // User management
@@ -202,16 +285,16 @@ interface StoredUser {
 }
 
 export const getUsers = (): StoredUser[] => {
-  const usersJson = localStorage.getItem('users');
-  return usersJson ? JSON.parse(usersJson) : [];
+  console.warn('getUsers() is deprecated. Use getUsers() from realFileSystem.ts instead.');
+  return [];
 };
 
 export const saveUsers = (users: StoredUser[]) => {
-  localStorage.setItem('users', JSON.stringify(users));
+  console.warn('saveUsers() is deprecated. Use backend API instead.');
 };
 
 export const addUser = (email: string, companyId: string): { user: StoredUser; password: string } => {
-  const users = getUsers();
+  console.warn('addUser() is deprecated. Use backend API instead.');
   const password = generatePassword();
   const newUser: StoredUser = {
     id: `user-${Date.now()}`,
@@ -220,18 +303,11 @@ export const addUser = (email: string, companyId: string): { user: StoredUser; p
     companyId,
     createdAt: new Date().toISOString(),
   };
-  users.push(newUser);
-  saveUsers(users);
   return { user: newUser, password };
 };
 
 export const deleteUser = (userId: string): boolean => {
-  const users = getUsers();
-  const updatedUsers = users.filter(user => user.id !== userId);
-  if (updatedUsers.length < users.length) {
-    saveUsers(updatedUsers);
-    return true;
-  }
+  console.warn('deleteUser() is deprecated. Use backend API instead.');
   return false;
 };
 

@@ -19,7 +19,7 @@ interface TableData {
   serialNumber: string;
   topPanels: number;
   bottomPanels: number;
-  companyName: string;
+  companyName?: string; // Make optional since PlantTable doesn't have it
 }
 
 const InfrastructureView = ({ onBack }: InfrastructureViewProps) => {
@@ -43,15 +43,36 @@ const InfrastructureView = ({ onBack }: InfrastructureViewProps) => {
   const avgPanelCurrent = totalPanels > 0 ? (company?.panelCurrent || 0) / totalPanels : (company?.panelCurrent || 0);
 
   useEffect(() => {
-    const savedTables = localStorage.getItem(`tables-${user?.companyName}`);
-    if (savedTables) {
-      setTables(JSON.parse(savedTables));
-    }
-  }, [user?.companyName]);
+    // Tables now loaded from backend API
+    const loadTables = async () => {
+      try {
+        const { getPlantDetails } = await import('@/lib/realFileSystem');
+        if (user && 'companyId' in user && user.companyId) {
+          const plantDetails = await getPlantDetails(user.companyId as string);
+          if (plantDetails?.tables) {
+            // Map PlantTable to TableData format
+            const mappedTables: TableData[] = plantDetails.tables.map(table => ({
+              id: table.id,
+              serialNumber: table.serialNumber,
+              topPanels: table.panelsTop,
+              bottomPanels: table.panelsBottom,
+              companyName: user.companyName
+            }));
+            setTables(mappedTables);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading tables from backend:', error);
+        setTables([]);
+      }
+    };
+    
+    loadTables();
+  }, [user]);
 
   const saveTables = (updatedTables: TableData[]) => {
     setTables(updatedTables);
-    localStorage.setItem(`tables-${user?.companyName}`, JSON.stringify(updatedTables));
+    // Table saving now handled by backend API
   };
 
   const handleAddTable = () => {

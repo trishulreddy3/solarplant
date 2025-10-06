@@ -1,30 +1,27 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getCurrentUser } from '@/lib/auth';
 import UnifiedViewTables from '@/components/UnifiedViewTables';
 
-const PlantView = () => {
+const PlantMonitor = () => {
   const navigate = useNavigate();
-  const { companyId } = useParams<{ companyId: string }>();
-  const [user] = useState(getCurrentUser());
+  const [user, setUser] = useState(getCurrentUser());
 
   useEffect(() => {
-    if (!user || user.role !== 'super_admin') {
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'plant_admin') {
       navigate('/admin-login');
       return;
     }
-
-    if (!companyId) {
-      navigate('/super-admin-dashboard');
-      return;
-    }
-  }, [user, navigate, companyId]);
+    
+    setUser(currentUser);
+  }, [navigate]);
 
   const handleBackClick = () => {
-    navigate(`/company-monitor/${companyId}`);
+    navigate('/plant-admin-dashboard');
   };
 
-  if (!user || !companyId) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center">
         <div className="text-center">
@@ -37,13 +34,12 @@ const PlantView = () => {
 
   return (
     <UnifiedViewTables
-      userRole="super_admin"
-      companyId={companyId}
+      userRole="plant_admin"
       showBackButton={true}
-      backButtonText="Back to Company Monitor"
+      backButtonText="Back to Dashboard"
       onBackClick={handleBackClick}
     />
   );
 };
 
-export default PlantView;
+export default PlantMonitor;

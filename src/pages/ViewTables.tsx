@@ -9,6 +9,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { getTablesByCompany, getPanelsByCompany, updatePanelData, Panel, migratePanels, getPanels, savePanels, getTables, saveTables, addActivityLog } from '@/lib/data';
 import { getCompanies } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { getAllCompanies, getPlantDetails, deletePanel, refreshPanelData } from '@/lib/realFileSystem'; // Import from realFileSystem
 
 const ViewTables = () => {
   const navigate = useNavigate();
@@ -29,11 +30,26 @@ const ViewTables = () => {
     }
 
     loadData();
-    
-    // Auto-refresh panel data every 5 seconds
+
+    // Continuous simulation: Auto-refresh panel data every 10-15 seconds
+    const refreshPanelDataFunction = async () => {
+      try {
+        if (user?.companyId) {
+          console.log('🔄 Refreshing panel data for simulation...');
+          await refreshPanelData(user.companyId);
+          // Reload data after refresh
+          loadData();
+        }
+      } catch (error) {
+        console.error('Error refreshing panel data:', error);
+      }      
+    };
+
     const interval = setInterval(() => {
-      loadData();
-    }, 5000);
+      // Random refresh interval between 10-15 seconds for realistic simulation
+      const delay = 10000 + Math.random() * 5000;
+      setTimeout(refreshPanelDataFunction, delay);
+    }, 15000); // Check every 15 seconds
 
     return () => clearInterval(interval);
   }, [user, navigate]);
@@ -56,47 +72,70 @@ const ViewTables = () => {
           // Generate panels from plant details
           const generatedPanels: Panel[] = [];
           plantDetails.tables.forEach((table: any) => {
-            // Top panels
+            // Top panels with backend simulation data
             for (let i = 0; i < table.panelsTop; i++) {
+              const voltage = table.topPanels?.voltage?.[i] || plantDetails.voltagePerPanel;
+              const current = table.topPanels?.current?.[i] || plantDetails.currentPerPanel;
+              const power = voltage * current;
+              
+              // Calculate health percentage based on expected vs actual power
+              const expectedPower = plantDetails.voltagePerPanel * plantDetails.currentPerPanel;
+              const healthPercentage = Math.round((power / expectedPower) * 100);
+              
+              // Get panel state from backend simulation
+              const panelState = table.topPanels?.states?.[i] || 'good';
+              
               generatedPanels.push({
-                id: `${table.id || 'unknown'}-top-${i}`,
-                tableId: table.id || 'unknown',
+                id: `${table.id}-top-${i}`,
+                tableId: table.id,
                 companyId: user.companyId,
                 name: `P${i + 1}`,
-                position: 'top',
+                position: 'top' as const,
                 maxVoltage: 40,
                 maxCurrent: 10,
-                currentVoltage: Math.round((35 + Math.random() * 5) * 10) / 10,
-                currentCurrent: Math.round((8 + Math.random() * 2) * 10) / 10,
-                powerGenerated: 0,
-                status: 'good',
+                currentVoltage: Math.round(voltage * 10) / 10,
+                currentCurrent: Math.round(current * 10) / 10,
+                powerGenerated: Math.round(power * 10) / 10,
+                status: healthPercentage >= 80 ? 'good' as const : 
+                       healthPercentage >= 10 ? 'average' as const : 'fault' as const,
+                state: panelState as 'good' | 'repairing' | 'fault',
                 lastUpdated: new Date().toISOString(),
               });
             }
             
-            // Bottom panels
+            // Bottom panels with backend simulation data
             for (let i = 0; i < table.panelsBottom; i++) {
+              const voltage = table.bottomPanels?.voltage?.[i] || plantDetails.voltagePerPanel;
+              const current = table.bottomPanels?.current?.[i] || plantDetails.currentPerPanel;
+              const power = voltage * current;
+              
+              // Calculate health percentage based on expected vs actual power
+              const expectedPower = plantDetails.voltagePerPanel * plantDetails.currentPerPanel;
+              const healthPercentage = Math.round((power / expectedPower) * 100);
+              
+              // Get panel state from backend simulation
+              const panelState = table.bottomPanels?.states?.[i] || 'good';
+              
               generatedPanels.push({
-                id: `${table.id || 'unknown'}-bottom-${i}`,
-                tableId: table.id || 'unknown',
+                id: `${table.id}-bottom-${i}`,
+                tableId: table.id,
                 companyId: user.companyId,
                 name: `P${i + 1}`,
-                position: 'bottom',
+                position: 'bottom' as const,
                 maxVoltage: 40,
                 maxCurrent: 10,
-                currentVoltage: Math.round((35 + Math.random() * 5) * 10) / 10,
-                currentCurrent: Math.round((8 + Math.random() * 2) * 10) / 10,
-                powerGenerated: 0,
-                status: 'good',
+                currentVoltage: Math.round(voltage * 10) / 10,
+                currentCurrent: Math.round(current * 10) / 10,
+                powerGenerated: Math.round(power * 10) / 10,
+                status: healthPercentage >= 80 ? 'good' as const : 
+                       healthPercentage >= 10 ? 'average' as const : 'fault' as const,
+                state: panelState as 'good' | 'repairing' | 'fault',
                 lastUpdated: new Date().toISOString(),
               });
             }
           });
           
-          // Calculate power for each panel
-          generatedPanels.forEach(panel => {
-            panel.powerGenerated = parseFloat((panel.currentVoltage * panel.currentCurrent).toFixed(2));
-          });
+          // Panel power is already calculated from backend data, no need to recalculate
           
           setPanels(generatedPanels);
         } else {
@@ -175,34 +214,123 @@ const ViewTables = () => {
     }
   };
 
-  const confirmDeletePanel = () => {
+  const confirmDeletePanel = async () => {
     if (!panelToDelete || !user) return;
 
-    const allPanels = getPanels();
-    const updatedPanels = allPanels.filter(p => p.id !== panelToDelete.id);
-    savePanels(updatedPanels);
+    try {
+      // Delete panel from backend
+      const success = await deletePanel(user.companyId, panelToDelete.id);
+      
+      if (success) {
+        // Reload data from backend to reflect changes
+        const plantDetails = await getPlantDetails(user.companyId);
+        if (plantDetails) {
+          setTables(plantDetails.tables || []);
+          
+          // Generate panels from backend plant details with realistic series data
+          const generatedPanels: Panel[] = [];
+          plantDetails.tables.forEach((table: any) => {
+            // Top panels with realistic series connection behavior
+            for (let i = 0; i < table.panelsTop; i++) {
+              const voltage = table.topPanels?.voltage?.[i] || plantDetails.voltagePerPanel;
+              const current = table.topPanels?.current?.[i] || plantDetails.currentPerPanel;
+              const power = voltage * current;
+              
+              // Calculate health percentage based on expected vs actual power
+              const expectedPower = plantDetails.voltagePerPanel * plantDetails.currentPerPanel;
+              const healthPercentage = Math.round((power / expectedPower) * 100);
+              
+              // Get panel state from backend simulation
+              const panelState = table.topPanels?.states?.[i] || 'good';
+              const panelHealth = table.topPanels?.health?.[i] || healthPercentage;
+              
+              generatedPanels.push({
+                id: `${table.id}-top-${i}`,
+                tableId: table.id,
+                companyId: user.companyId,
+                name: `P${i + 1}`,
+                position: 'top' as const,
+                maxVoltage: 40,
+                maxCurrent: 10,
+                currentVoltage: Math.round(voltage * 10) / 10,
+                currentCurrent: Math.round(current * 10) / 10,
+                powerGenerated: Math.round(power * 10) / 10,
+                status: healthPercentage >= 80 ? 'good' as const : 
+                       healthPercentage >= 10 ? 'average' as const : 'fault' as const,
+                state: panelState as 'good' | 'repairing' | 'fault',
+                lastUpdated: new Date().toISOString(),
+              });
+            }
+            
+            // Bottom panels with realistic series connection behavior
+            for (let i = 0; i < table.panelsBottom; i++) {
+              const voltage = table.bottomPanels?.voltage?.[i] || plantDetails.voltagePerPanel;
+              const current = table.bottomPanels?.current?.[i] || plantDetails.currentPerPanel;
+              const power = voltage * current;
+              
+              // Calculate health percentage based on expected vs actual power
+              const expectedPower = plantDetails.voltagePerPanel * plantDetails.currentPerPanel;
+              const healthPercentage = Math.round((power / expectedPower) * 100);
+              
+              // Get panel state from backend simulation
+              const panelState = table.bottomPanels?.states?.[i] || 'good';
+              const panelHealth = table.bottomPanels?.health?.[i] || healthPercentage;
+              
+              generatedPanels.push({
+                id: `${table.id}-bottom-${i}`,
+                tableId: table.id,
+                companyId: user.companyId,
+                name: `P${i + 1}`,
+                position: 'bottom' as const,
+                maxVoltage: 40,
+                maxCurrent: 10,
+                currentVoltage: Math.round(voltage * 10) / 10,
+                currentCurrent: Math.round(current * 10) / 10,
+                powerGenerated: Math.round(power * 10) / 10,
+                status: healthPercentage >= 80 ? 'good' as const : 
+                       healthPercentage >= 10 ? 'average' as const : 'fault' as const,
+                state: panelState as 'good' | 'repairing' | 'fault',
+                lastUpdated: new Date().toISOString(),
+              });
+            }
+          });
+          
+          setPanels(generatedPanels);
+        }
 
-    // Update local state
-    setPanels(updatedPanels.filter(p => p.companyId === user.companyId));
+        // Log activity for super admin monitoring
+        const companies = getCompanies();
+        const company = companies.find(c => c.id === user.companyId);
+        addActivityLog(
+          user.companyId,
+          company?.name || 'Unknown Company',
+          'delete',
+          'panel',
+          panelToDelete.id,
+          panelToDelete.name,
+          `Deleted panel ${panelToDelete.name} from table`,
+          user.email
+        );
 
-    // Log activity for super admin monitoring
-    const companies = getCompanies();
-    const company = companies.find(c => c.id === user.companyId);
-    addActivityLog(
-      user.companyId,
-      company?.name || 'Unknown Company',
-      'delete',
-      'panel',
-      panelToDelete.id,
-      panelToDelete.name,
-      `Deleted panel ${panelToDelete.name} from table`,
-      user.email
-    );
-
-    toast({
-      title: 'Panel Deleted',
-      description: `Panel ${panelToDelete.name} has been removed from the table.`,
-    });
+        toast({
+          title: 'Panel Deleted',
+          description: `Panel ${panelToDelete.name} has been removed from the table.`,
+        });
+      } else {
+        toast({
+          title: 'Deletion Failed',
+          description: 'Failed to delete the panel. Please try again.',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting panel:', error);
+      toast({
+        title: 'Deletion Failed',
+        description: 'An error occurred while deleting the panel. Please try again.',
+        variant: 'destructive'
+      });
+    }
 
     setShowDeleteDialog(false);
     setPanelToDelete(null);
@@ -276,6 +404,14 @@ const ViewTables = () => {
     setTableToDelete(null);
   };
 
+  // Function to calculate panel health percentage
+  const getPanelHealthPercentage = (panel: Panel): number => {
+    const maxPower = panel.maxVoltage * panel.maxCurrent; // Maximum possible power
+    const currentPower = panel.powerGenerated; // Current power output
+    const healthPercentage = (currentPower / maxPower) * 100;
+    return Math.round(healthPercentage);
+  };
+
   // Function to identify main culprit panels in series connection
   const getMainCulpritPanels = () => {
     const culpritPanels: Array<{
@@ -305,45 +441,41 @@ const ViewTables = () => {
       // Extract table number from serial number (e.g., "TBL-0001" -> "1")
       const tableNumber = table.serialNumber.split('-')[1] ? parseInt(table.serialNumber.split('-')[1]) : 1;
 
-      // Check top panels for series faults
-      let lastGoodIndex = -1;
+      // Check top panels for actual faults ONLY (not series effect panels)
       topPanels.forEach((panel, index) => {
-        if (panel.status === 'fault' || panel.status === 'average') {
-          if (lastGoodIndex === index - 1) {
-            // This is the first fault panel in a series
+        // Only show panels that are actually faulty (repairing or fault), not just affected by series connection
+        if (panel.state === 'repairing' || panel.state === 'fault') {
+          // Verify this panel has low health (actually needs repair)
+          const healthPercentage = getPanelHealthPercentage(panel);
+          if (healthPercentage < 80) {
             culpritPanels.push({
               id: panel.id,
               tableId: table.id,
               tableNumber: tableNumber.toString(),
               position: 'top',
               panelNumber: panel.name,
-              status: panel.status
+              status: panel.state // Use state from backend simulation
             });
           }
-          lastGoodIndex = index;
-        } else {
-          lastGoodIndex = index;
         }
       });
 
-      // Check bottom panels for series faults
-      lastGoodIndex = -1;
+      // Check bottom panels for actual faults ONLY (not series effect panels)
       bottomPanels.forEach((panel, index) => {
-        if (panel.status === 'fault' || panel.status === 'average') {
-          if (lastGoodIndex === index - 1) {
-            // This is the first fault panel in a series
+        // Only show panels that are actually faulty (repairing or fault), not just affected by series connection
+        if (panel.state === 'repairing' || panel.state === 'fault') {
+          // Verify this panel has low health (actually needs repair)
+          const healthPercentage = getPanelHealthPercentage(panel);
+          if (healthPercentage < 80) {
             culpritPanels.push({
               id: panel.id,
               tableId: table.id,
               tableNumber: tableNumber.toString(),
               position: 'bottom',
               panelNumber: panel.name,
-              status: panel.status
+              status: panel.state // Use state from backend simulation
             });
           }
-          lastGoodIndex = index;
-        } else {
-          lastGoodIndex = index;
         }
       });
     });
@@ -355,24 +487,31 @@ const ViewTables = () => {
   const repairingPanels = mainCulpritPanels.filter(p => p.status === 'average');
   const faultPanels = mainCulpritPanels.filter(p => p.status === 'fault');
 
-  // Function to calculate panel health percentage
-  const getPanelHealthPercentage = (panel: Panel): number => {
-    const maxPower = panel.maxVoltage * panel.maxCurrent; // Maximum possible power
-    const currentPower = panel.powerGenerated; // Current power output
-    const healthPercentage = (currentPower / maxPower) * 100;
-    return Math.round(healthPercentage);
-  };
-
-  // Function to get panel image based on health percentage
+  // Function to get panel image based on panel state from backend simulation
   const getPanelImage = (panel: Panel): string => {
+    // Check if panel has state information from backend simulation
+    if (panel.state) {
+      switch (panel.state) {
+        case 'good':
+          return '/images/panels/image1.png'; // Blue - Good condition
+        case 'repairing':
+          return '/images/panels/image2.png'; // Orange - Repairing/Cleaning
+        case 'fault':
+          return '/images/panels/image3.png'; // Red - Fault condition
+        default:
+          return '/images/panels/image1.png'; // Default to good
+      }
+    }
+    
+    // Fallback to health percentage for backward compatibility
     const healthPercentage = getPanelHealthPercentage(panel);
     
-    if (healthPercentage >= 100) {
-      return '/panel-images/image1.png';
-    } else if (healthPercentage >= 50) {
-      return '/panel-images/image2.png';
+    if (healthPercentage >= 80) {
+      return '/images/panels/image1.png'; // Blue - Good condition
+    } else if (healthPercentage >= 20) {
+      return '/images/panels/image2.png'; // Orange - Repairing condition
     } else {
-      return '/panel-images/image3.png';
+      return '/images/panels/image3.png'; // Red - Fault condition
     }
   };
 
@@ -397,7 +536,7 @@ const ViewTables = () => {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Infrastructure
           </Button>
-          <h1 className="text-2xl font-bold gradient-text">Tables & Panels Dashboard</h1>
+          <h1 className="text-2xl font-bold text-primary">Tables & Panels Dashboard</h1>
         </div>
       </header>
 

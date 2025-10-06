@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LogOut, Building2, Zap, Activity, Plus, Users, Settings, Eye, ArrowLeft, Monitor, Trash2 } from 'lucide-react';
+import { LogOut, Building2, Zap, Activity, Plus, Users, Settings, Eye, ArrowLeft, Monitor, Trash2, Shield, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import InfrastructureView from '@/components/plant/InfrastructureView';
@@ -43,17 +43,27 @@ const SuperAdminDashboard = () => {
   });
 
   useEffect(() => {
-    // Load users for all companies
-    const loadAllUsers = () => {
+    // Load users for all companies from backend API
+    const loadAllUsers = async () => {
       const allUsers: CompanyUsers = {};
-      companies.forEach(company => {
-        const savedUsers = localStorage.getItem(`users-${company.name}`);
-        if (savedUsers) {
-          allUsers[company.name] = JSON.parse(savedUsers);
-        } else {
-          allUsers[company.name] = [];
+      try {
+        const { getUsers } = await import('@/lib/realFileSystem');
+        for (const company of companies) {
+          try {
+            const users = await getUsers(company.id);
+            allUsers[company.name] = users;
+          } catch (error) {
+            console.error(`Error loading users for ${company.name}:`, error);
+            allUsers[company.name] = [];
+          }
         }
-      });
+      } catch (error) {
+        console.error('Error loading users from backend:', error);
+        // Fallback to empty users
+        companies.forEach(company => {
+          allUsers[company.name] = [];
+        });
+      }
       setCompanyUsers(allUsers);
     };
     loadAllUsers();
@@ -163,13 +173,13 @@ const SuperAdminDashboard = () => {
   // Add Company View
   if (viewMode === 'addCompany') {
     return (
-      <div className="min-h-screen p-6">
+      <div className="min-h-screen p-6 flex flex-col">
         <Button onClick={() => setViewMode('main')} variant="ghost" className="mb-6">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
         </Button>
 
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto flex-grow">
           <div className="glass-panel p-8">
             <h2 className="text-3xl font-bold mb-6 text-primary">Add New Company</h2>
             
@@ -321,6 +331,74 @@ const SuperAdminDashboard = () => {
             </Button>
           </div>
         </div>
+
+        {/* Company Information Footer */}
+        <footer className="bg-gray-50 border-t border-gray-200 mt-8">
+          <div className="container mx-auto px-4 py-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Company Info */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Microsyslogic</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Advanced solar plant monitoring and management system for optimal energy production.
+                </p>
+                <div className="flex items-center text-sm text-gray-500">
+                  <Shield className="h-4 w-4 mr-2" />
+                  <span>Secure & Compliant</span>
+                </div>
+              </div>
+
+              {/* Quick Links */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Quick Links</h3>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <a href="/privacy-policy" className="text-gray-600 hover:text-primary">
+                      Privacy Policy
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/terms-of-service" className="text-gray-600 hover:text-primary">
+                      Terms of Service
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/help" className="text-gray-600 hover:text-primary">
+                      Help & Support
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Contact */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Contact</h3>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 mr-2" />
+                    <a href="mailto:SuperAdmin.Microsyslogic@gmail.com" className="hover:text-primary">
+                      SuperAdmin.Microsyslogic@gmail.com
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Bar */}
+            <div className="border-t border-gray-200 mt-6 pt-4 flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500">
+              <div>
+                © 2025 Microsyslogic. All rights reserved.
+              </div>
+              <div className="flex items-center space-x-4 mt-2 sm:mt-0">
+                <span>GDPR Compliant</span>
+                <span>•</span>
+                <span>CCPA Compliant</span>
+                <span>•</span>
+                <span>ISO 27001</span>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
     );
   }
@@ -328,13 +406,13 @@ const SuperAdminDashboard = () => {
   // Edit Admin View
   if (viewMode === 'editAdmin' && selectedCompany) {
     return (
-      <div className="min-h-screen p-6">
+      <div className="min-h-screen p-6 flex flex-col">
         <Button onClick={() => setViewMode('main')} variant="ghost" className="mb-6">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
         </Button>
 
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto flex-grow">
           <div className="glass-panel p-8">
             <h2 className="text-3xl font-bold mb-6 text-primary">Edit Admin - {selectedCompany.name}</h2>
             
@@ -370,6 +448,74 @@ const SuperAdminDashboard = () => {
               </Button>
             </div>
           </div>
+
+          {/* Company Information Footer */}
+          <footer className="bg-gray-50 border-t border-gray-200 mt-8">
+            <div className="container mx-auto px-4 py-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Company Info */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">Microsyslogic</h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Advanced solar plant monitoring and management system for optimal energy production.
+                  </p>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <Shield className="h-4 w-4 mr-2" />
+                    <span>Secure & Compliant</span>
+                  </div>
+                </div>
+
+                {/* Quick Links */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">Quick Links</h3>
+                  <ul className="space-y-2 text-sm">
+                    <li>
+                      <a href="/privacy-policy" className="text-gray-600 hover:text-primary">
+                        Privacy Policy
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/terms-of-service" className="text-gray-600 hover:text-primary">
+                        Terms of Service
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/help" className="text-gray-600 hover:text-primary">
+                        Help & Support
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Contact */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">Contact</h3>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div className="flex items-center">
+                      <Mail className="h-4 w-4 mr-2" />
+                      <a href="mailto:SuperAdmin.Microsyslogic@gmail.com" className="hover:text-primary">
+                        SuperAdmin.Microsyslogic@gmail.com
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Bar */}
+              <div className="border-t border-gray-200 mt-6 pt-4 flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500">
+                <div>
+                  © 2025 Microsyslogic. All rights reserved.
+                </div>
+                <div className="flex items-center space-x-4 mt-2 sm:mt-0">
+                  <span>GDPR Compliant</span>
+                  <span>•</span>
+                  <span>CCPA Compliant</span>
+                  <span>•</span>
+                  <span>ISO 27001</span>
+                </div>
+              </div>
+            </div>
+          </footer>
         </div>
       </div>
     );
@@ -411,13 +557,13 @@ const SuperAdminDashboard = () => {
     console.log('Table configs count:', latestCompany.tableConfigs?.length);
     
     return (
-      <div className="min-h-screen p-6">
+      <div className="min-h-screen p-6 flex flex-col">
         <Button onClick={() => setViewMode('main')} variant="ghost" className="mb-6">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
         </Button>
 
-        <div className="glass-panel p-8 mb-6">
+        <div className="glass-panel p-8 mb-6 flex-grow">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-3xl font-bold text-primary">{latestCompany.name}</h2>
@@ -592,12 +738,80 @@ const SuperAdminDashboard = () => {
           passwordLabel="Super Admin Password"
           warningMessage={`This action cannot be undone. This will permanently delete the company "${deleteModal.companyName}", all its data, admin account, and all associated users. All plant configurations and monitoring data will be lost.`}
         />
+
+        {/* Company Information Footer */}
+        <footer className="bg-gray-50 border-t border-gray-200 mt-8">
+          <div className="container mx-auto px-4 py-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Company Info */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Microsyslogic</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Advanced solar plant monitoring and management system for optimal energy production.
+                </p>
+                <div className="flex items-center text-sm text-gray-500">
+                  <Shield className="h-4 w-4 mr-2" />
+                  <span>Secure & Compliant</span>
+                </div>
+              </div>
+
+              {/* Quick Links */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Quick Links</h3>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <a href="/privacy-policy" className="text-gray-600 hover:text-primary">
+                      Privacy Policy
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/terms-of-service" className="text-gray-600 hover:text-primary">
+                      Terms of Service
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/help" className="text-gray-600 hover:text-primary">
+                      Help & Support
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Contact */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Contact</h3>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 mr-2" />
+                    <a href="mailto:SuperAdmin.Microsyslogic@gmail.com" className="hover:text-primary">
+                      SuperAdmin.Microsyslogic@gmail.com
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Bar */}
+            <div className="border-t border-gray-200 mt-6 pt-4 flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500">
+              <div>
+                © 2025 Microsyslogic. All rights reserved.
+              </div>
+              <div className="flex items-center space-x-4 mt-2 sm:mt-0">
+                <span>GDPR Compliant</span>
+                <span>•</span>
+                <span>CCPA Compliant</span>
+                <span>•</span>
+                <span>ISO 27001</span>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-6">
+    <div className="min-h-screen p-6 flex flex-col">
       {/* Header */}
       <div className="glass-panel p-6 mb-6">
         <div className="flex items-center justify-between">
@@ -611,7 +825,7 @@ const SuperAdminDashboard = () => {
             </Button>
             <Button onClick={() => {
               console.log('=== DETAILED DEBUG ===');
-              const companies = JSON.parse(localStorage.getItem('companies') || '[]');
+              const companies = companies; // Use backend data
               console.log('Companies in localStorage:', companies.length);
               companies.forEach((company, index) => {
                 console.log(`\nCompany ${index + 1}: ${company.name}`);
@@ -633,7 +847,7 @@ const SuperAdminDashboard = () => {
             </Button>
             <Button onClick={() => {
               console.log('=== FIXING COMPANY DATA ===');
-              const companies = JSON.parse(localStorage.getItem('companies') || '[]');
+              const companies = companies; // Use backend data
               const fixedCompanies = companies.map((company) => {
                 let fixed = { ...company };
                 let wasFixed = false;
@@ -668,7 +882,7 @@ const SuperAdminDashboard = () => {
                 return fixed;
               });
               
-              localStorage.setItem('companies', JSON.stringify(fixedCompanies));
+              // Data saving now handled by backend API
               console.log('All companies fixed and saved to localStorage');
               alert('Company data fixed! Refresh the page to see changes.');
             }} variant="outline" style={{backgroundColor: '#FF9800', color: 'white', borderColor: '#FF9800'}}>
@@ -760,7 +974,7 @@ const SuperAdminDashboard = () => {
       </div>
 
       {/* Companies List */}
-      <div className="glass-panel p-6">
+      <div className="glass-panel p-6 flex-grow">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold">Registered Solar Plant Companies</h2>
           <Button
@@ -867,6 +1081,74 @@ const SuperAdminDashboard = () => {
 
       {/* Debug Component - Remove in production */}
       {process.env.NODE_ENV === 'development' && <TableCreationTest />}
+
+      {/* Company Information Footer */}
+      <footer className="bg-gray-50 border-t border-gray-200 mt-8">
+        <div className="container mx-auto px-4 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Company Info */}
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Microsyslogic</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                Advanced solar plant monitoring and management system for optimal energy production.
+              </p>
+              <div className="flex items-center text-sm text-gray-500">
+                <Shield className="h-4 w-4 mr-2" />
+                <span>Secure & Compliant</span>
+              </div>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Quick Links</h3>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="/privacy-policy" className="text-gray-600 hover:text-primary">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="/terms-of-service" className="text-gray-600 hover:text-primary">
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a href="/help" className="text-gray-600 hover:text-primary">
+                    Help & Support
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Contact</h3>
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <Mail className="h-4 w-4 mr-2" />
+                  <a href="mailto:SuperAdmin.Microsyslogic@gmail.com" className="hover:text-primary">
+                    SuperAdmin.Microsyslogic@gmail.com
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-gray-200 mt-6 pt-4 flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500">
+            <div>
+              © 2025 Microsyslogic. All rights reserved.
+            </div>
+            <div className="flex items-center space-x-4 mt-2 sm:mt-0">
+              <span>GDPR Compliant</span>
+              <span>•</span>
+              <span>CCPA Compliant</span>
+              <span>•</span>
+              <span>ISO 27001</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

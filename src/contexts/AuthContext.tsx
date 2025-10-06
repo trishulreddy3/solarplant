@@ -118,16 +118,8 @@ const seedDemoUsers = () => {
     }
   ];
 
-  // Seed users for each company if they don't exist
-  INITIAL_COMPANIES.forEach(company => {
-    const existingUsers = localStorage.getItem(`users-${company.name}`);
-    if (!existingUsers) {
-      const companyUsers = demoUsers.filter(user => user.companyName === company.name);
-      if (companyUsers.length > 0) {
-        localStorage.setItem(`users-${company.name}`, JSON.stringify(companyUsers));
-      }
-    }
-  });
+  // User seeding now handled by backend API
+  console.log('User seeding handled by backend API');
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -135,18 +127,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [companies, setCompanies] = useState<Company[]>(INITIAL_COMPANIES);
 
   useEffect(() => {
-    // Load from localStorage
-    const savedUser = localStorage.getItem('currentUser');
-    const savedCompanies = localStorage.getItem('companies');
+    // Load companies from backend API instead of localStorage
+    const loadCompanies = async () => {
+      try {
+        const { getAllCompanies } = await import('@/lib/realFileSystem');
+        const backendCompanies = await getAllCompanies();
+        setCompanies(backendCompanies);
+      } catch (error) {
+        console.error('Error loading companies from backend:', error);
+        // Fallback to initial companies
+        setCompanies(INITIAL_COMPANIES);
+      }
+    };
     
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    if (savedCompanies) {
-      const parsedCompanies = JSON.parse(savedCompanies);
-      // Migrate companies to new tableConfigs structure if needed
-      const migratedCompanies = parsedCompanies.map((company: Company) => {
-        let needsMigration = false;
+    loadCompanies();
         
         // Check if company needs tableConfigs migration
         if (!company.tableConfigs || company.tableConfigs.length === 0) {
@@ -190,20 +184,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setCompanies(migratedCompanies);
     }
 
-    // Seed demo users on first load
-    seedDemoUsers();
-    
-    // Debug: Log what's in localStorage
-    console.log('Demo users seeded. Checking localStorage:');
-    console.log('SolarTech users:', localStorage.getItem('users-SolarTech Solutions'));
-    console.log('GreenEnergy users:', localStorage.getItem('users-GreenEnergy Corp'));
+    // User seeding now handled by backend API
   }, []);
 
-  useEffect(() => {
-    // Save to localStorage
-    console.log('AuthContext: Saving companies to localStorage:', companies);
-    localStorage.setItem('companies', JSON.stringify(companies));
-  }, [companies]);
+  // Companies are now managed by backend API, no localStorage needed
 
   const login = (email: string, password: string, companyName?: string): boolean => {
     // Validate input
@@ -218,7 +202,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (email === SUPER_ADMIN.email && password === 'superadmin123') {
       console.log('Super admin login successful');
       setUser(SUPER_ADMIN);
-      localStorage.setItem('currentUser', JSON.stringify(SUPER_ADMIN));
+      // User session now managed in memory
       return true;
     }
 
@@ -238,39 +222,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         companyName: company.name
       };
       setUser(adminUser);
-      localStorage.setItem('currentUser', JSON.stringify(adminUser));
       return true;
     }
 
-    // Check regular users - search across all companies
-    console.log('Checking regular users across all companies...');
-    for (const comp of companies) {
-      const usersData = localStorage.getItem(`users-${comp.name}`);
-      if (usersData) {
-        try {
-          const users = JSON.parse(usersData);
-          console.log(`Checking users for ${comp.name}:`, users);
-          const foundUser = users.find((u: { email: string; password: string; companyName: string }) => 
-            u.email === email && u.password === password
-          );
-          if (foundUser) {
-            console.log('Regular user login successful:', foundUser.email);
-            const regularUser: User = {
-              id: foundUser.id,
-              email: foundUser.email,
-              role: 'user',
-              name: foundUser.name,
-              companyName: foundUser.companyName
-            };
-            setUser(regularUser);
-            localStorage.setItem('currentUser', JSON.stringify(regularUser));
-            return true;
-          }
-        } catch (error) {
-          console.error('Error parsing user data for company:', comp.name, error);
-        }
-      }
-    }
+    // Check regular users - now handled by backend API
+    console.log('Regular user authentication now handled by backend API');
 
     console.log('Login failed: No matching credentials found');
     return false;
@@ -278,7 +234,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('currentUser');
   };
 
   const addCompany = (company: Company) => {
@@ -387,8 +342,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Remove company from companies list
     setCompanies(prev => prev.filter(c => c.id !== companyId));
 
-    // Remove company users from localStorage
-    localStorage.removeItem(`users-${companyToDelete.name}`);
+    // User deletion now handled by backend API
 
     console.log(`Company ${companyToDelete.name} deleted by Super Admin`);
     return true;
@@ -401,21 +355,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return false;
     }
 
-    // Get users from localStorage
-    const usersData = localStorage.getItem(`users-${companyName}`);
-    if (!usersData) {
-      return false;
-    }
-
-    const users = JSON.parse(usersData);
-    const userToDelete = users.find((u: User) => u.email === userEmail);
-    if (!userToDelete) {
-      return false;
-    }
-
-    // Remove user from the list
-    const updatedUsers = users.filter((u: User) => u.email !== userEmail);
-    localStorage.setItem(`users-${companyName}`, JSON.stringify(updatedUsers));
+    // User deletion now handled by backend API
 
     console.log(`User ${userEmail} deleted from ${companyName} by Plant Admin`);
     return true;

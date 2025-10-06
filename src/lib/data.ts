@@ -14,13 +14,14 @@ export interface ActivityLog {
   adminEmail: string;
 }
 
+// Activity logs now handled by backend API
 export const getActivityLogs = (): ActivityLog[] => {
-  const logsJson = localStorage.getItem('activityLogs');
-  return logsJson ? JSON.parse(logsJson) : [];
+  console.warn('getActivityLogs() is deprecated. Use backend API instead.');
+  return [];
 };
 
 export const saveActivityLogs = (logs: ActivityLog[]) => {
-  localStorage.setItem('activityLogs', JSON.stringify(logs));
+  console.warn('saveActivityLogs() is deprecated. Use backend API instead.');
 };
 
 export const addActivityLog = (
@@ -76,16 +77,18 @@ export interface Panel {
   currentCurrent: number;
   powerGenerated: number; // Calculated: V * I
   status: 'good' | 'average' | 'fault';
+  state?: 'good' | 'repairing' | 'fault'; // New simulation state from backend
   lastUpdated: string;
 }
 
+// Tables now handled by backend API
 export const getTables = (): Table[] => {
-  const tablesJson = localStorage.getItem('tables');
-  return tablesJson ? JSON.parse(tablesJson) : [];
+  console.warn('getTables() is deprecated. Use backend API instead.');
+  return [];
 };
 
 export const saveTables = (tables: Table[]) => {
-  localStorage.setItem('tables', JSON.stringify(tables));
+  console.warn('saveTables() is deprecated. Use backend API instead.');
 };
 
 export const addTable = (companyId: string, panelsTop: number, panelsBottom: number, adminEmail?: string): Table => {
@@ -140,13 +143,14 @@ export const getTablesByCompany = (companyId: string): Table[] => {
   return getTables().filter(t => t.companyId === companyId);
 };
 
+// Panels now handled by backend API
 export const getPanels = (): Panel[] => {
-  const panelsJson = localStorage.getItem('panels');
-  return panelsJson ? JSON.parse(panelsJson) : [];
+  console.warn('getPanels() is deprecated. Use backend API instead.');
+  return [];
 };
 
 export const savePanels = (panels: Panel[]) => {
-  localStorage.setItem('panels', JSON.stringify(panels));
+  console.warn('savePanels() is deprecated. Use backend API instead.');
 };
 
 export const createPanel = (tableId: string, companyId: string, index: number, position: 'top' | 'bottom'): Panel => {

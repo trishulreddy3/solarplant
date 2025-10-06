@@ -59,14 +59,15 @@ const COMPANY_FOLDERS_KEY = 'company_folders';
 const FILE_SYSTEM_PREFIX = 'fs_';
 
 // Get all company folders
+// Company folders now managed by backend API
 export const getCompanyFolders = (): CompanyFolder[] => {
-  const foldersJson = localStorage.getItem(COMPANY_FOLDERS_KEY);
-  return foldersJson ? JSON.parse(foldersJson) : [];
+  console.warn('getCompanyFolders() is deprecated. Use backend API instead.');
+  return [];
 };
 
 // Save company folders list
 export const saveCompanyFolders = (folders: CompanyFolder[]) => {
-  localStorage.setItem(COMPANY_FOLDERS_KEY, JSON.stringify(folders));
+  console.warn('saveCompanyFolders() is deprecated. Use backend API instead.');
 };
 
 // Create company folder structure
@@ -93,19 +94,17 @@ export const createCompanyFolder = (
 
 // File operations for company data
 export const writeCompanyFile = (companyId: string, fileName: string, data: unknown) => {
-  const fileKey = `${FILE_SYSTEM_PREFIX}${companyId}_${fileName}`;
-  localStorage.setItem(fileKey, JSON.stringify(data));
+  // File operations now handled by backend API
+  console.warn('writeFile() is deprecated. Use backend API instead.');
 };
 
 export const readCompanyFile = (companyId: string, fileName: string): unknown => {
-  const fileKey = `${FILE_SYSTEM_PREFIX}${companyId}_${fileName}`;
-  const dataJson = localStorage.getItem(fileKey);
-  return dataJson ? JSON.parse(dataJson) : null;
+  console.warn('readCompanyFile() is deprecated. Use backend API instead.');
+  return null;
 };
 
 export const deleteCompanyFile = (companyId: string, fileName: string) => {
-  const fileKey = `${FILE_SYSTEM_PREFIX}${companyId}_${fileName}`;
-  localStorage.removeItem(fileKey);
+  console.warn('deleteCompanyFile() is deprecated. Use backend API instead.');
 };
 
 // Admin credentials file operations
@@ -225,10 +224,10 @@ export const createPlantTable = (
 export const getAllCompanies = () => {
   const folders = getCompanyFolders();
   return folders.map(folder => {
-    const plantDetails = getPlantDetails(folder.companyId);
+    const plantDetails = getPlantDetails(folder.id);
     return {
-      id: folder.companyId,
-      name: folder.companyName,
+      id: folder.id,
+      name: folder.name,
       folderPath: folder.folderPath,
       createdAt: folder.createdAt,
       plantPowerKW: plantDetails?.plantPowerKW || 0,
@@ -243,7 +242,7 @@ export const getAllCompanies = () => {
 export const deleteCompanyFolder = (companyId: string) => {
   // Remove from folders list
   const folders = getCompanyFolders();
-  const updatedFolders = folders.filter(folder => folder.companyId !== companyId);
+  const updatedFolders = folders.filter(folder => folder.id !== companyId);
   saveCompanyFolders(updatedFolders);
 
   // Delete all company files
@@ -253,9 +252,8 @@ export const deleteCompanyFolder = (companyId: string) => {
     `${FILE_SYSTEM_PREFIX}${companyId}_plant_details.json`,
   ];
 
-  fileKeys.forEach(key => {
-    localStorage.removeItem(key);
-  });
+  // File cleanup now handled by backend API
+  console.warn('cleanupCompanyFiles() is deprecated. Use backend API instead.');
 };
 
 // Update panel data for realistic simulation

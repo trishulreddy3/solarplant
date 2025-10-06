@@ -7,21 +7,14 @@ const TableCreationTest = () => {
   const { companies, addCompany } = useAuth();
   const [testResult, setTestResult] = useState<string>('');
 
-  const checkLocalStorage = () => {
-    const savedCompanies = localStorage.getItem('companies');
-    if (savedCompanies) {
-      const companies = JSON.parse(savedCompanies);
-      console.log('Companies in localStorage:', companies);
-      companies.forEach((company: any, index: number) => {
-        console.log(`Company ${index + 1}: ${company.name}`);
-        console.log(`  - totalTables: ${company.totalTables}`);
-        console.log(`  - topRowPanels: ${company.topRowPanels}`);
-        console.log(`  - bottomRowPanels: ${company.bottomRowPanels}`);
-        console.log(`  - tableConfigs:`, company.tableConfigs);
-      });
-    } else {
-      console.log('No companies found in localStorage');
-    }
+  const checkBackendData = () => {
+    // Companies now loaded from backend API
+    console.log('Companies from backend:', companies);
+    companies.forEach((company: any, index: number) => {
+      console.log(`Company ${index + 1}: ${company.name}`);
+      console.log(`  - ID: ${company.id}`);
+      console.log(`  - Tables: ${company.tables?.length || 0}`);
+    });
   };
 
   const runTest = () => {
@@ -86,8 +79,8 @@ Test Results:
         <Button onClick={runTest}>
           Run Table Creation Test
         </Button>
-        <Button onClick={checkLocalStorage} variant="outline">
-          Check localStorage
+        <Button onClick={checkBackendData} variant="outline">
+          Check Backend Data
         </Button>
       </div>
       

@@ -3,14 +3,14 @@
  * This helps identify where the panel count issue occurs
  */
 
-export const debugTableCreation = () => {
+export const debugTableCreation = async () => {
   console.log('=== DEBUG TABLE CREATION ===');
   
-  // Check what's in localStorage
-  const savedCompanies = localStorage.getItem('companies');
-  if (savedCompanies) {
-    const companies = JSON.parse(savedCompanies);
-    console.log('Companies in localStorage:', companies.length);
+  // Check what's in backend API
+  try {
+    const { getAllCompanies } = await import('@/lib/realFileSystem');
+    const companies = await getAllCompanies();
+    console.log('Companies from backend:', companies.length);
     
     companies.forEach((company: any, index: number) => {
       console.log(`\nCompany ${index + 1}: ${company.name}`);
@@ -30,8 +30,8 @@ export const debugTableCreation = () => {
         console.log(`  ❌ NO TABLE CONFIGS FOUND!`);
       }
     });
-  } else {
-    console.log('No companies found in localStorage');
+  } catch (error) {
+    console.error('Error loading companies from backend:', error);
   }
   
   console.log('=== END DEBUG ===');

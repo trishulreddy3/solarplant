@@ -3,18 +3,27 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Activity, Building2, Clock, User, Trash2, Plus, Edit, Eye } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft, Activity, Building2, Clock, User, Trash2, Plus, Edit, Eye, Users } from 'lucide-react';
 import { getCurrentUser, getCompanies } from '@/lib/auth';
 import { getActivityLogsByCompany, getTablesByCompany, getPanelsByCompany, type ActivityLog } from '@/lib/data';
 
 const CompanyMonitor = () => {
   const navigate = useNavigate();
   const { companyId } = useParams<{ companyId: string }>();
+  const { toast } = useToast();
   const [user] = useState(getCurrentUser());
   const [company, setCompany] = useState<any>(null);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [tables, setTables] = useState<any[]>([]);
   const [panels, setPanels] = useState<any[]>([]);
+  const [showUserDetails, setShowUserDetails] = useState(false);
+  const [adminDetails, setAdminDetails] = useState<any>(null);
+  const [companyUsers, setCompanyUsers] = useState<any[]>([]);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; company: any }>({ isOpen: false, company: null });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== 'super_admin') {
@@ -37,6 +46,36 @@ const CompanyMonitor = () => {
     return () => clearInterval(interval);
   }, [user, navigate, companyId]);
 
+  const loadUserDetails = async () => {
+    if (!companyId) return;
+
+    try {
+      // Get admin details
+      const { getAllCompanies } = await import('@/lib/realFileSystem');
+      const response = await fetch(`http://localhost:5000/api/companies/${companyId}/admin`);
+      if (response.ok) {
+        const adminData = await response.json();
+        setAdminDetails(adminData);
+
+        // Get company users and filter out the admin
+        const usersResponse = await fetch(`http://localhost:5000/api/companies/${companyId}/users`);
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
+          
+          // Filter out the admin from users list
+          const filteredUsers = usersData.filter((user: any) => {
+            // Remove admin from users list
+            return user.email !== adminData.email && user.role !== 'plant_admin';
+          });
+          
+          setCompanyUsers(filteredUsers);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user details:', error);
+    }
+  };
+
   const loadData = async () => {
     if (!companyId) return;
 
@@ -47,13 +86,15 @@ const CompanyMonitor = () => {
       const selectedCompany = backendCompanies.find(c => c.id === companyId);
       setCompany(selectedCompany);
 
-      // Get activity logs (still using localStorage for now)
-      const logs = getActivityLogsByCompany(companyId);
-      setActivityLogs(logs);
+      // Get activity logs (temporarily disabled to avoid deprecation warnings)
+      // const logs = getActivityLogsByCompany(companyId);
+      // setActivityLogs(logs);
+      setActivityLogs([]); // Empty for now
 
       // Get tables and panels from backend
       const { getPlantDetails } = await import('@/lib/realFileSystem');
       const plantDetails = await getPlantDetails(companyId);
+      
       if (plantDetails) {
         setTables(plantDetails.tables || []);
         // Calculate total panels from tables
@@ -63,8 +104,12 @@ const CompanyMonitor = () => {
         setTables([]);
         setPanels([]);
       }
+
+      // Load user details
+      await loadUserDetails();
     } catch (error) {
       console.error('Error loading company data:', error);
+      
       // Fallback to localStorage
       const companies = getCompanies();
       const selectedCompany = companies.find(c => c.id === companyId);
@@ -112,6 +157,65 @@ const CompanyMonitor = () => {
     return date.toLocaleString();
   };
 
+  const handleDeleteCompany = () => {
+    setDeleteDialog({ isOpen: true, company });
+  };
+
+  const handleDeleteConfirm = async (password: string) => {
+    if (!company || !user) return;
+
+    setIsDeleting(true);
+    try {
+      // Verify password with backend
+      const response = await fetch('http://localhost:5000/api/verify-super-admin-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        toast({
+          title: "Invalid Password",
+          description: "Please enter the correct super admin password.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Password verified, proceed with deletion
+      const { deleteCompanyFolder } = await import('@/lib/realFileSystem');
+      
+      // Delete company folder
+      await deleteCompanyFolder(company.id);
+      
+      toast({
+        title: "Company Deleted",
+        description: `Company "${company.name}" has been successfully deleted.`,
+        variant: "default",
+      });
+      
+      // Navigate back to dashboard
+      navigate('/super-admin-dashboard');
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      toast({
+        title: "Deletion Failed",
+        description: "Failed to delete company. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialog({ isOpen: false, company: null });
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialog({ isOpen: false, company: null });
+  };
 
   if (!user) return null;
 
@@ -158,7 +262,7 @@ const CompanyMonitor = () => {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
           </Button>
-          <h1 className="text-2xl font-bold gradient-text">Company Monitor</h1>
+          <h1 className="text-2xl font-bold text-primary">Company Monitor</h1>
           <p className="text-sm text-muted-foreground">Real-time activity monitoring for {company.name}</p>
         </div>
       </header>
@@ -175,14 +279,114 @@ const CompanyMonitor = () => {
                     <Building2 className="h-5 w-5 text-primary" />
                     Company Overview
                   </div>
-                  <Button
-                    onClick={() => navigate(`/plant-view/${companyId}`)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    View Plant
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => navigate(`/plant-view/${companyId}`)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Eye className="mr-2 h-4 w-4" />
+                      View Plant
+                    </Button>
+                    <Dialog open={showUserDetails} onOpenChange={setShowUserDetails}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Users className="mr-2 h-4 w-4" />
+                          User Details
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            <Users className="h-5 w-5 text-primary" />
+                            User Details - {company?.name}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-6">
+                          {/* Admin Details */}
+                          {adminDetails && (
+                            <div className="space-y-3">
+                              <h3 className="text-lg font-semibold text-primary">Plant Admin</h3>
+                              <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                                <CardContent className="p-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                                      <User className="h-5 w-5 text-white" />
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold text-blue-900 dark:text-blue-100">
+                                        {adminDetails.name || adminDetails.email}
+                                      </p>
+                                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                                        {adminDetails.email}
+                                      </p>
+                                      <Badge variant="secondary" className="mt-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                        Plant Admin
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </div>
+                          )}
+
+                          {/* Users List */}
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-lg font-semibold text-primary">Users Created by This Admin</h3>
+                              <Badge variant="outline" className="text-xs">
+                                {companyUsers.length} user{companyUsers.length !== 1 ? 's' : ''}
+                              </Badge>
+                            </div>
+                            {companyUsers.length > 0 ? (
+                              <div className="space-y-2">
+                                {companyUsers.map((user, index) => (
+                                  <Card key={index} className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+                                    <CardContent className="p-4">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                          <User className="h-4 w-4 text-white" />
+                                        </div>
+                                        <div>
+                                          <p className="font-semibold text-green-900 dark:text-green-100">
+                                            {user.name || user.email}
+                                          </p>
+                                          <p className="text-sm text-green-700 dark:text-green-300">
+                                            {user.email}
+                                          </p>
+                                          <Badge variant="secondary" className="mt-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                            User
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            ) : (
+                              <Card className="bg-gray-50 dark:bg-gray-900">
+                                <CardContent className="p-4 text-center">
+                                  <Users className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                                  <p className="text-gray-600 dark:text-gray-400">No users created by this admin yet</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                    Users will appear here when the admin creates them
+                                  </p>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Button
+                      onClick={handleDeleteCompany}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Company
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -315,6 +519,19 @@ const CompanyMonitor = () => {
           </div>
         </div>
       </main>
+
+      {/* Delete Company Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Company"
+        description={`You are about to permanently delete the company "${company?.name}". This action will remove all company data, users, tables, and plant details.`}
+        entityName={company?.name || ''}
+        entityType="company"
+        adminEmail={user?.email || ''}
+        isLoading={isDeleting}
+      />
     </div>
   );
 };
