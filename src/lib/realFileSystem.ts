@@ -13,6 +13,11 @@ const getApiBaseUrl = () => {
     return import.meta.env.VITE_API_BASE_URL;
   }
   
+  // For production, use the production API URL
+  if (import.meta.env.PROD) {
+    return 'https://solarplant.onrender.com/api';
+  }
+  
   // Default to localhost for development
   return 'http://localhost:5000/api';
 };
@@ -201,7 +206,7 @@ export const deleteCompanyFolder = async (companyId: string): Promise<{ success:
 
 // Check if backend server is running
 export const checkServerStatus = async (): Promise<boolean> => {
-  const maxRetries = 3;
+  const maxRetries = 2; // Reduced from 3 to prevent infinite loops
   const retryDelay = 1000; // 1 second
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {

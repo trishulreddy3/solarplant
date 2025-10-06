@@ -1,45 +1,11 @@
-# Netlify Configuration File
-
 [build]
-  # Build command
   command = "npm run build"
-  
-  # Output directory
   publish = "dist"
-  
-  # Environment variables
-  [build.environment]
-    NODE_VERSION = "20.19.3"
 
-# Redirect all routes to index.html for SPA routing
+[build.environment]
+  VITE_API_BASE_URL = "https://solarplant.onrender.com/api"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-# Headers for security and CORS
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    X-XSS-Protection = "1; mode=block"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-
-# Cache static assets
-[[headers]]
-  for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-# Production context
-[context.production]
-  environment = { VITE_API_BASE_URL = "https://solarplant.onrender.com/api" }
-
-# Deploy preview context
-[context.deploy-preview]
-  environment = { VITE_API_BASE_URL = "https://solarplant.onrender.com/api" }
-
-# Branch deploy context  
-[context.branch-deploy]
-  environment = { VITE_API_BASE_URL = "https://solarplant.onrender.com/api" }

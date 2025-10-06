@@ -50,6 +50,7 @@ const SuperAdminDashboard = () => {
               tableCounts[company.id] = plantDetails?.tables?.length || 0;
             } catch (error) {
               console.error(`Error loading plant details for ${company.id}:`, error);
+              // Don't retry failed requests - set to 0 and continue
               tableCounts[company.id] = 0;
             }
           }
