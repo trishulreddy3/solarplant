@@ -33,21 +33,46 @@ console.log('🔧 API Configuration:', {
 
 // Circuit breaker to prevent infinite retries
 const failedRequests = new Set<string>();
-const MAX_FAILED_ATTEMPTS = 3;
+const MAX_FAILED_ATTEMPTS = 2; // Reduced from 3 to 2
+const GLOBAL_FAILURE_THRESHOLD = 5; // Stop all requests after 5 total failures
 
 // Helper function to check if a request should be skipped
 const shouldSkipRequest = (endpoint: string): boolean => {
-  return failedRequests.has(endpoint) && failedRequests.size >= MAX_FAILED_ATTEMPTS;
+  // Skip if this specific endpoint has failed
+  if (failedRequests.has(endpoint)) {
+    return true;
+  }
+  
+  // Skip if too many total failures (global circuit breaker)
+  if (failedRequests.size >= GLOBAL_FAILURE_THRESHOLD) {
+    console.warn(`🚫 Global circuit breaker activated. Total failures: ${failedRequests.size}`);
+    return true;
+  }
+  
+  return false;
 };
 
 // Helper function to mark request as failed
 const markRequestFailed = (endpoint: string): void => {
   failedRequests.add(endpoint);
+  console.warn(`🚫 Marking endpoint as failed: ${endpoint}. Total failed: ${failedRequests.size}`);
+  
+  // If we hit the global threshold, log a warning
+  if (failedRequests.size >= GLOBAL_FAILURE_THRESHOLD) {
+    console.error(`🚨 GLOBAL CIRCUIT BREAKER ACTIVATED! Too many failed requests (${failedRequests.size}). Stopping all API calls.`);
+  }
 };
 
 // Helper function to mark request as successful
 const markRequestSuccess = (endpoint: string): void => {
   failedRequests.delete(endpoint);
+  console.log(`✅ Marking endpoint as successful: ${endpoint}. Remaining failures: ${failedRequests.size}`);
+};
+
+// Reset circuit breaker (useful for testing or manual reset)
+export const resetCircuitBreaker = (): void => {
+  failedRequests.clear();
+  console.log('🔄 Circuit breaker reset');
 };
 
 export interface CompanyFolder {
