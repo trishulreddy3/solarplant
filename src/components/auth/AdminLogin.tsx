@@ -16,19 +16,20 @@ const AdminLogin = ({ onBack }: AdminLoginProps) => {
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     loginId: '',
-    password: ''
+    password: '',
+    companyName: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const success = login(formData.loginId, formData.password);
+    const success = await login(formData.loginId, formData.password, formData.companyName.toLowerCase());
     
     if (success) {
       toast.success('Login successful!');
       navigate('/dashboard');
     } else {
-      toast.error('Invalid credentials. Please try again.');
+      toast.error('Invalid credentials or company name. Please try again.');
     }
   };
 
@@ -57,6 +58,19 @@ const AdminLogin = ({ onBack }: AdminLoginProps) => {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                type="text"
+                placeholder="Enter your company name"
+                value={formData.companyName}
+                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                required
+                className="glass-card"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="loginId">Login ID (Email)</Label>
               <Input
@@ -105,9 +119,9 @@ const AdminLogin = ({ onBack }: AdminLoginProps) => {
         <div className="mt-6 glass-card p-4">
           <p className="text-sm text-muted-foreground text-center">
             <strong>Demo Credentials:</strong><br />
-            Super Admin: admin@pm.com / superadmin123<br />
-            Plant Admin: admin@solartech.com / admin123<br />
-            Plant Admin: admin@greenenergy.com / admin123
+            Super Admin: Company: pm / Email: admin@pm.com / Password: superadmin123<br />
+            Plant Admin: Company: solartech solutions / Email: admin@solartech.com / Password: admin123<br />
+            Plant Admin: Company: greenenergy corp / Email: admin@greenenergy.com / Password: admin123
           </p>
         </div>
       </div>

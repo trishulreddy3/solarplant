@@ -63,7 +63,10 @@ export interface PlantTable {
 // API helper function
 async function apiCall(endpoint: string, options: RequestInit = {}) {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = `${API_BASE_URL}${endpoint}`;
+    console.log('🌐 Making API call to:', url);
+    
+    const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -71,13 +74,17 @@ async function apiCall(endpoint: string, options: RequestInit = {}) {
       ...options,
     });
 
+    console.log('📡 API response status:', response.status, response.statusText);
+
     if (!response.ok) {
       throw new Error(`API call failed: ${response.status} ${response.statusText}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log('📦 API response data:', data);
+    return data;
   } catch (error) {
-    console.error('API call error:', error);
+    console.error('❌ API call error:', error);
     throw error;
   }
 }
@@ -171,12 +178,27 @@ export const deleteCompanyFolder = async (companyId: string): Promise<{ success:
 
 // Check if backend server is running
 export const checkServerStatus = async (): Promise<boolean> => {
-  try {
-    await apiCall('/companies');
-    return true;
-  } catch {
-    return false;
+  const maxRetries = 3;
+  const retryDelay = 1000; // 1 second
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔍 Checking server status (attempt ${attempt}/${maxRetries}) at:`, `${API_BASE_URL}/companies`);
+      const result = await apiCall('/companies');
+      console.log('✅ Server status check successful:', result);
+      return true;
+    } catch (error) {
+      console.error(`❌ Server status check failed (attempt ${attempt}/${maxRetries}):`, error);
+      
+      if (attempt < maxRetries) {
+        console.log(`⏳ Waiting ${retryDelay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
+    }
   }
+  
+  console.error('❌ All server status check attempts failed');
+  return false;
 };
 
 // Get panel health percentage from plant details

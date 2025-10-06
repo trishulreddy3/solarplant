@@ -33,7 +33,7 @@ export interface Company {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, companyName?: string) => boolean;
+  login: (email: string, password: string, companyName?: string) => Promise<boolean>;
   logout: () => void;
   companies: Company[];
   addCompany: (company: Company) => void;
@@ -189,7 +189,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Companies are now managed by backend API, no localStorage needed
 
-  const login = (email: string, password: string, companyName?: string): boolean => {
+  const login = async (email: string, password: string, companyName?: string): Promise<boolean> => {
     // Validate input
     if (!email || !password) {
       console.log('Login failed: Missing email or password');
@@ -198,35 +198,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     console.log('Login attempt:', { email, password, companyName });
 
-    // Check Super Admin
+    // Check Super Admin (frontend only)
     if (email === SUPER_ADMIN.email && password === 'superadmin123') {
+      // For super admin, company name should be 'pm' (lowercase)
+      if (companyName && companyName.toLowerCase() !== 'pm') {
+        console.log('Super admin login failed: Invalid company name');
+        return false;
+      }
       console.log('Super admin login successful');
       setUser(SUPER_ADMIN);
-      // User session now managed in memory
       return true;
     }
 
-    // Check Plant Admins
-    console.log('Checking plant admins...');
-    const company = companies.find(c => 
-      c.adminEmail === email && c.adminPassword === password
-    );
-    
-    if (company) {
-      console.log('Plant admin login successful:', company.name);
-      const adminUser: User = {
-        id: `admin-${company.id}`,
-        email: company.adminEmail,
-        role: 'plantadmin',
-        name: `${company.name} Admin`,
-        companyName: company.name
-      };
-      setUser(adminUser);
-      return true;
-    }
+    // For plant admins and users, use backend API
+    if (companyName) {
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            companyName: companyName.toLowerCase()
+          }),
+        });
 
-    // Check regular users - now handled by backend API
-    console.log('Regular user authentication now handled by backend API');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            console.log('Backend login successful:', data.user);
+            setUser(data.user);
+            return true;
+          }
+        } else {
+          const errorData = await response.json();
+          console.log('Backend login failed:', errorData.error);
+        }
+      } catch (error) {
+        console.error('Error calling backend login:', error);
+      }
+    }
 
     console.log('Login failed: No matching credentials found');
     return false;

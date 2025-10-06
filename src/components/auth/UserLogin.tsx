@@ -16,19 +16,20 @@ const UserLogin = ({ onBack }: UserLoginProps) => {
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    companyName: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const success = login(formData.email, formData.password);
+    const success = await login(formData.email, formData.password, formData.companyName.toLowerCase());
     
     if (success) {
       toast.success('Login successful!');
       navigate('/dashboard');
     } else {
-      toast.error('Invalid email or password. Please try again.');
+      toast.error('Invalid email, password, or company name. Please try again.');
     }
   };
 
@@ -57,6 +58,19 @@ const UserLogin = ({ onBack }: UserLoginProps) => {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                type="text"
+                placeholder="Enter your company name"
+                value={formData.companyName}
+                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                required
+                className="glass-card"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -106,8 +120,8 @@ const UserLogin = ({ onBack }: UserLoginProps) => {
         <div className="mt-6 glass-card p-4">
           <p className="text-sm text-muted-foreground text-center">
             <strong>Demo User Credentials:</strong><br />
-            Email: john.doe@solartech.com / Password: user123<br />
-            Email: jane.smith@greenenergy.com / Password: user123
+            Company: solartech solutions / Email: john.doe@solartech.com / Password: user123<br />
+            Company: greenenergy corp / Email: jane.smith@greenenergy.com / Password: user123
           </p>
         </div>
       </div>

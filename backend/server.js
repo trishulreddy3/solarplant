@@ -42,10 +42,74 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
+
+// Enhanced JSON parsing with error handling
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, res, buf, encoding) => {
+    try {
+      JSON.parse(buf);
+    } catch (e) {
+      console.error('Invalid JSON received:', buf.toString());
+      throw new Error('Invalid JSON format');
+    }
+  }
+}));
+
+// Global error handler for JSON parsing errors
+app.use((error, req, res, next) => {
+  if (error.message === 'Invalid JSON format') {
+    console.error('JSON parsing error:', error.message);
+    return res.status(400).json({ 
+      error: 'Invalid JSON format',
+      message: 'Please check your request body format'
+    });
+  }
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    console.error('JSON parsing error:', error.message);
+    return res.status(400).json({ 
+      error: 'Invalid JSON format',
+      message: 'Please check your request body format'
+    });
+  }
+  next(error);
+});
 
 // Set environment based on PORT
 const COMPANIES_DIR = path.join(__dirname, 'companies');
+
+// Helper function to find company folder by companyId
+async function findCompanyFolder(companyId) {
+  try {
+    const companies = await fs.readdir(COMPANIES_DIR);
+    
+    for (const folderName of companies) {
+      const companyPath = path.join(COMPANIES_DIR, folderName);
+      const stat = await fs.stat(companyPath);
+      
+      if (stat.isDirectory()) {
+        const plantDetailsPath = path.join(companyPath, 'plant_details.json');
+        
+        try {
+          const plantData = await fs.readFile(plantDetailsPath, 'utf8');
+          const plant = JSON.parse(plantData);
+          
+          if (plant.companyId === companyId) {
+            return companyPath;
+          }
+        } catch (error) {
+          // Skip this folder if plant details can't be read
+          continue;
+        }
+      }
+    }
+    
+    return null; // Company not found
+  } catch (error) {
+    console.error('Error finding company folder:', error);
+    return null;
+  }
+}
 
 // Panel health states and repair simulation
 const PANEL_STATES = {
@@ -207,7 +271,7 @@ app.get('/api/companies', async (req, res) => {
           const plantData = await fs.readFile(plantDetailsPath, 'utf8');
           const plant = JSON.parse(plantData);
           companyData.push({
-            id: companyId,
+            id: plant.companyId, // Use the original companyId from plant details
             name: plant.companyName,
             folderPath: companyPath,
             createdAt: stat.birthtime.toISOString(),
@@ -226,11 +290,102 @@ app.get('/api/companies', async (req, res) => {
   }
 });
 
+// Create new company
+app.post('/api/companies', async (req, res) => {
+  try {
+    const { 
+      companyId, 
+      companyName, 
+      voltagePerPanel, 
+      currentPerPanel, 
+      plantPowerKW, 
+      adminEmail, 
+      adminPassword, 
+      adminName 
+    } = req.body;
+    
+    // Validate required fields
+    if (!companyId || !companyName || !voltagePerPanel || !currentPerPanel || !plantPowerKW || !adminEmail || !adminPassword || !adminName) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+    
+    // Use company name as folder name, sanitized for filesystem
+    const sanitizedCompanyName = companyName.replace(/[^a-zA-Z0-9-_]/g, '_').toLowerCase();
+    const companyPath = path.join(COMPANIES_DIR, sanitizedCompanyName);
+    
+    // Check if company already exists
+    try {
+      await fs.access(companyPath);
+      return res.status(409).json({ error: 'Company already exists' });
+    } catch (error) {
+      // Company doesn't exist, continue with creation
+    }
+    
+    // Create company directory
+    await fs.mkdir(companyPath, { recursive: true });
+    
+    // Calculate power per panel
+    const powerPerPanel = voltagePerPanel * currentPerPanel;
+    
+    // Create plant details file
+    const plantDetails = {
+      companyId,
+      companyName,
+      voltagePerPanel,
+      currentPerPanel,
+      powerPerPanel,
+      plantPowerKW,
+      tables: [],
+      createdAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
+    };
+    
+    await fs.writeFile(
+      path.join(companyPath, 'plant_details.json'), 
+      JSON.stringify(plantDetails, null, 2)
+    );
+    
+    // Create admin credentials file
+    const adminCredentials = {
+      email: adminEmail,
+      password: adminPassword,
+      name: adminName,
+      createdAt: new Date().toISOString()
+    };
+    
+    await fs.writeFile(
+      path.join(companyPath, 'admin.json'), 
+      JSON.stringify(adminCredentials, null, 2)
+    );
+    
+    // Create users file (initially empty)
+    await fs.writeFile(
+      path.join(companyPath, 'users.json'), 
+      JSON.stringify([], null, 2)
+    );
+    
+    res.json({
+      success: true,
+      message: 'Company created successfully',
+      companyPath: companyPath
+    });
+  } catch (error) {
+    console.error('Error creating company:', error);
+    res.status(500).json({ error: 'Failed to create company' });
+  }
+});
+
 // Get plant details for a company
 app.get('/api/companies/:companyId', async (req, res) => {
   try {
     const { companyId } = req.params;
-    const plantDetailsPath = path.join(COMPANIES_DIR, companyId, 'plant_details.json');
+    const companyPath = await findCompanyFolder(companyId);
+    
+    if (!companyPath) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+    
+    const plantDetailsPath = path.join(companyPath, 'plant_details.json');
     
     const plantDetailsData = await fs.readFile(plantDetailsPath, 'utf8');
     const plantDetails = JSON.parse(plantDetailsData);
@@ -246,7 +401,13 @@ app.get('/api/companies/:companyId', async (req, res) => {
 app.get('/api/companies/:companyId/admin', async (req, res) => {
   try {
     const { companyId } = req.params;
-    const adminPath = path.join(COMPANIES_DIR, companyId, 'admin.json');
+    const companyPath = await findCompanyFolder(companyId);
+    
+    if (!companyPath) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+    
+    const adminPath = path.join(companyPath, 'admin.json');
     
     const adminData = await fs.readFile(adminPath, 'utf8');
     const admin = JSON.parse(adminData);
@@ -262,7 +423,13 @@ app.get('/api/companies/:companyId/admin', async (req, res) => {
 app.get('/api/companies/:companyId/users', async (req, res) => {
   try {
     const { companyId } = req.params;
-    const usersPath = path.join(COMPANIES_DIR, companyId, 'users.json');
+    const companyPath = await findCompanyFolder(companyId);
+    
+    if (!companyPath) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+    
+    const usersPath = path.join(companyPath, 'users.json');
     
     const usersData = await fs.readFile(usersPath, 'utf8');
     // Add better error handling for JSON parsing
@@ -282,7 +449,13 @@ app.post('/api/companies/:companyId/users', async (req, res) => {
     const { companyId } = req.params;
     const { email, password, role, createdBy } = req.body;
     
-    const usersPath = path.join(COMPANIES_DIR, companyId, 'users.json');
+    const companyPath = await findCompanyFolder(companyId);
+    
+    if (!companyPath) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+    
+    const usersPath = path.join(companyPath, 'users.json');
     
     // Read existing users
     let users = [];
@@ -321,7 +494,11 @@ app.post('/api/companies/:companyId/users', async (req, res) => {
 app.delete('/api/companies/:companyId', async (req, res) => {
   try {
     const { companyId } = req.params;
-    const companyPath = path.join(COMPANIES_DIR, companyId);
+    const companyPath = await findCompanyFolder(companyId);
+    
+    if (!companyPath) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
     
     await fs.rm(companyPath, { recursive: true, force: true });
     
@@ -338,7 +515,11 @@ app.post('/api/companies/:companyId/tables', async (req, res) => {
     const { companyId } = req.params;
     const { panelsTop, panelsBottom } = req.body;
     
-    const companyPath = path.join(COMPANIES_DIR, companyId);
+    const companyPath = await findCompanyFolder(companyId);
+    
+    if (!companyPath) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
     const plantDetailsPath = path.join(companyPath, 'plant_details.json');
     
     // Read current plant details
@@ -382,7 +563,11 @@ app.post('/api/companies/:companyId/tables', async (req, res) => {
 app.delete('/api/companies/:companyId/tables/:tableId/panels/:panelId', async (req, res) => {
   try {
     const { companyId, tableId, panelId } = req.params;
-    const companyPath = path.join(COMPANIES_DIR, companyId);
+    const companyPath = await findCompanyFolder(companyId);
+    
+    if (!companyPath) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
     const plantDetailsPath = path.join(companyPath, 'plant_details.json');
     
     // Read current plant details
@@ -441,7 +626,11 @@ app.delete('/api/companies/:companyId/tables/:tableId/panels/:panelId', async (r
 app.put('/api/companies/:companyId/refresh-panel-data', async (req, res) => {
   try {
     const { companyId } = req.params;
-    const companyPath = path.join(COMPANIES_DIR, companyId);
+    const companyPath = await findCompanyFolder(companyId);
+    
+    if (!companyPath) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
     const plantDetailsPath = path.join(companyPath, 'plant_details.json');
     
     // Read current plant details
@@ -495,7 +684,11 @@ app.post('/api/companies/:companyId/tables/:tableId/add-panels', async (req, res
     const { companyId, tableId } = req.params;
     const { position, panelCount } = req.body; // position: 'top' or 'bottom', panelCount: number
     
-    const companyPath = path.join(COMPANIES_DIR, companyId);
+    const companyPath = await findCompanyFolder(companyId);
+    
+    if (!companyPath) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
     const plantDetailsPath = path.join(companyPath, 'plant_details.json');
     
     // Read current plant details
@@ -565,6 +758,130 @@ app.post('/api/companies/:companyId/tables/:tableId/add-panels', async (req, res
     res.status(500).json({ error: 'Failed to add panels' });
   }
 });
+
+// User authentication endpoint
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password, companyName } = req.body;
+    
+    // Validate required fields
+    if (!email || !password || !companyName) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        message: 'Email, password, and company name are required' 
+      });
+    }
+    
+    // Validate field types
+    if (typeof email !== 'string' || typeof password !== 'string' || typeof companyName !== 'string') {
+      return res.status(400).json({ 
+        error: 'Invalid field types',
+        message: 'All fields must be strings' 
+      });
+    }
+    
+    const sanitizedCompanyName = companyName.toLowerCase().trim();
+    
+    // Find company by name
+    const companyPath = await findCompanyFolderByName(sanitizedCompanyName);
+    if (!companyPath) {
+      return res.status(404).json({ 
+        error: 'Company not found',
+        message: `Company "${sanitizedCompanyName}" does not exist` 
+      });
+    }
+    
+    // Check admin credentials first
+    const adminPath = path.join(companyPath, 'admin.json');
+    try {
+      const adminData = await fs.readFile(adminPath, 'utf8');
+      const admin = JSON.parse(adminData);
+      
+      if (admin.email === email && admin.password === password) {
+        return res.json({
+          success: true,
+          user: {
+            id: `admin-${sanitizedCompanyName}`,
+            email: admin.email,
+            role: 'plantadmin',
+            name: `${sanitizedCompanyName} Admin`,
+            companyName: sanitizedCompanyName
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error reading admin file:', error);
+      // Admin file doesn't exist or is corrupted, continue to check users
+    }
+    
+    // Check user credentials
+    const usersPath = path.join(companyPath, 'users.json');
+    try {
+      const usersData = await fs.readFile(usersPath, 'utf8');
+      const users = JSON.parse(usersData.trim());
+      
+      const user = users.find(u => u.email === email && u.password === password);
+      if (user) {
+        return res.json({
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            name: user.name || user.email,
+            companyName: sanitizedCompanyName
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error reading users file:', error);
+    }
+    
+    res.status(401).json({ 
+      error: 'Invalid credentials',
+      message: 'Email, password, or company name is incorrect' 
+    });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ 
+      error: 'Login failed',
+      message: 'An internal server error occurred' 
+    });
+  }
+});
+
+// Helper function to find company folder by company name
+async function findCompanyFolderByName(companyName) {
+  try {
+    const companies = await fs.readdir(COMPANIES_DIR);
+    
+    for (const folderName of companies) {
+      const companyPath = path.join(COMPANIES_DIR, folderName);
+      const stat = await fs.stat(companyPath);
+      
+      if (stat.isDirectory()) {
+        const plantDetailsPath = path.join(companyPath, 'plant_details.json');
+        
+        try {
+          const plantData = await fs.readFile(plantDetailsPath, 'utf8');
+          const plant = JSON.parse(plantData);
+          
+          if (plant.companyName.toLowerCase() === companyName) {
+            return companyPath;
+          }
+        } catch (error) {
+          // Skip this folder if plant details can't be read
+          continue;
+        }
+      }
+    }
+    
+    return null; // Company not found
+  } catch (error) {
+    console.error('Error finding company folder by name:', error);
+    return null;
+  }
+}
 
 // Password verification endpoint for 2FA delete confirmation
 app.post('/api/verify-super-admin-password', async (req, res) => {
