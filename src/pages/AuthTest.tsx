@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 const AuthTest = () => {
   const [email, setEmail] = useState('super_admin@microsyslogic.com');
   const [password, setPassword] = useState('super_admin_password');
+  const [companyName, setCompanyName] = useState('microsyslogic');
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -38,7 +39,7 @@ const AuthTest = () => {
     try {
       // Import the login function dynamically
       const { login } = await import('@/lib/auth');
-      const result = await login(email, password);
+      const result = await login(email, password, companyName);
       setResult({ type: 'login', data: result });
     } catch (error) {
       setResult({ type: 'login', error: error.message });
@@ -55,6 +56,14 @@ const AuthTest = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Company Name</label>
+                <Input
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value.toLowerCase())}
+                  placeholder="microsyslogic"
+                />
+              </div>
               <div>
                 <label className="text-sm font-medium">Email</label>
                 <Input

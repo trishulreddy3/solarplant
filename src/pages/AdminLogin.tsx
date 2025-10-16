@@ -14,6 +14,7 @@ const AdminLogin = () => {
   const [formData, setFormData] = useState({
     loginId: '',
     password: '',
+    companyName: '',
   });
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -26,6 +27,7 @@ const AdminLogin = () => {
       setFormData({
         loginId: stored.email,
         password: stored.password,
+        companyName: '',
       });
       setRememberMe(true);
     } else {
@@ -37,7 +39,7 @@ const AdminLogin = () => {
     e.preventDefault();
     
     try {
-      const result = await login(formData.loginId, formData.password);
+      const result = await login(formData.loginId, formData.password, formData.companyName);
       
       if (result.success && result.user) {
         // Store credentials if "Remember Me" is checked
@@ -98,6 +100,19 @@ const AdminLogin = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-3">
+              <Label htmlFor="companyName" className="text-base font-medium text-gray-700">Company Name</Label>
+              <Input
+                id="companyName"
+                type="text"
+                placeholder="Enter your company name"
+                value={formData.companyName}
+                onChange={(e) => setFormData({ ...formData, companyName: e.target.value.toLowerCase() })}
+                required
+                className="h-14 text-base input-modern"
+              />
+            </div>
+
+            <div className="space-y-3">
               <Label htmlFor="loginId" className="text-base font-medium text-gray-700">Login ID / Email</Label>
               <Input
                 id="loginId"
@@ -142,6 +157,20 @@ const AdminLogin = () => {
               Login
             </Button>
           </form>
+
+          <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="text-sm font-semibold text-blue-800 mb-2">Demo Credentials:</h3>
+            <div className="text-xs text-blue-700 space-y-1">
+              <div><strong>Super Admin:</strong></div>
+              <div>Company: microsyslogic (fixed)</div>
+              <div>Email: super_admin@microsyslogic.com</div>
+              <div>Password: super_admin_password</div>
+              <div className="mt-2"><strong>Plant Admin:</strong></div>
+              <div>Company: [Check backend companies]</div>
+              <div>Email: [Admin email from company]</div>
+              <div>Password: [Admin password from company]</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

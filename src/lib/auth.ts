@@ -28,7 +28,7 @@ const SUPER_ADMIN = {
   email: 'super_admin@microsyslogic.com',
   password: 'super_admin_password',
   role: 'super_admin' as UserRole,
-  companyName: 'Microsyslogic',
+  companyName: 'microsyslogic',
 };
 
 // Session-based user management with persistent storage
@@ -92,7 +92,7 @@ export const setCurrentUser = (user: User | null) => {
 };
 
 // Check backend credentials
-const checkBackendCredentials = async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
+const checkBackendCredentials = async (email: string, password: string, companyName?: string): Promise<{ success: boolean; user?: User; error?: string }> => {
   try {
     // Import the backend functions
     const { getAllCompanies, getAdminCredentials, getUsers } = await import('./realFileSystem');
@@ -100,8 +100,20 @@ const checkBackendCredentials = async (email: string, password: string): Promise
     // Get all companies from backend
     const backendCompanies = await getAllCompanies();
     
+    // Filter companies by name if provided
+    const companiesToCheck = companyName 
+      ? backendCompanies.filter(company => 
+          company.name.toLowerCase() === companyName.toLowerCase()
+        )
+      : backendCompanies;
+    
+    // If company name was provided but no matching company found
+    if (companyName && companiesToCheck.length === 0) {
+      return { success: false, error: 'Company not found' };
+    }
+    
     // Check each company for matching credentials
-    for (const company of backendCompanies) {
+    for (const company of companiesToCheck) {
       try {
         // Check admin credentials
         const adminCreds = await getAdminCredentials(company.id);
@@ -144,10 +156,15 @@ const checkBackendCredentials = async (email: string, password: string): Promise
   }
 };
 
-export const login = async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
+export const login = async (email: string, password: string, companyName?: string): Promise<{ success: boolean; user?: User; error?: string }> => {
   try {
     // Check Super Admin (hardcoded)
     if (email === SUPER_ADMIN.email && password === SUPER_ADMIN.password) {
+      // For super admin, company name should be 'microsyslogic' (case insensitive)
+      if (companyName && companyName.toLowerCase() !== SUPER_ADMIN.companyName.toLowerCase()) {
+        return { success: false, error: 'Invalid company name for super admin' };
+      }
+      
       const user: User = {
         id: 'super-admin-1',
         email: SUPER_ADMIN.email,
@@ -160,7 +177,7 @@ export const login = async (email: string, password: string): Promise<{ success:
     }
 
     // Check backend credentials first
-    const backendResult = await checkBackendCredentials(email, password);
+    const backendResult = await checkBackendCredentials(email, password, companyName);
     if (backendResult.success) {
       setCurrentUser(backendResult.user);
       return { success: true, user: backendResult.user };

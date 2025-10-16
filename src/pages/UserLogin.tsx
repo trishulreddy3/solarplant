@@ -14,6 +14,7 @@ const UserLogin = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    companyName: '',
   });
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -26,6 +27,7 @@ const UserLogin = () => {
       setFormData({
         email: stored.email,
         password: stored.password,
+        companyName: '',
       });
       setRememberMe(true);
     } else {
@@ -37,7 +39,7 @@ const UserLogin = () => {
     e.preventDefault();
     
     try {
-      const result = await login(formData.email, formData.password);
+      const result = await login(formData.email, formData.password, formData.companyName);
       
       if (result.success && result.user) {
         // Store credentials if "Remember Me" is checked
@@ -101,6 +103,19 @@ const UserLogin = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-3">
+              <Label htmlFor="companyName" className="text-base font-medium text-gray-700">Company Name</Label>
+              <Input
+                id="companyName"
+                type="text"
+                placeholder="Enter your company name"
+                value={formData.companyName}
+                onChange={(e) => setFormData({ ...formData, companyName: e.target.value.toLowerCase() })}
+                required
+                className="h-14 text-base input-modern"
+              />
+            </div>
+
+            <div className="space-y-3">
               <Label htmlFor="email" className="text-base font-medium text-gray-700">Email</Label>
               <Input
                 id="email"
@@ -145,6 +160,20 @@ const UserLogin = () => {
               Login
             </Button>
           </form>
+
+          <div className="mt-8 p-4 bg-green-50 rounded-lg border border-green-200">
+            <h3 className="text-sm font-semibold text-green-800 mb-2">Demo Credentials:</h3>
+            <div className="text-xs text-green-700 space-y-1">
+              <div><strong>Regular Users:</strong></div>
+              <div>Company: [company name] (auto-converted to lowercase)</div>
+              <div>Email: [User email from company]</div>
+              <div>Password: [User password from company]</div>
+              <div className="mt-2"><strong>Super Admin:</strong></div>
+              <div>Company: microsyslogic (fixed)</div>
+              <div>Email: super_admin@microsyslogic.com</div>
+              <div>Password: super_admin_password</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
