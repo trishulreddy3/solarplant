@@ -9,7 +9,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { getTablesByCompany, getPanelsByCompany, updatePanelData, Panel, migratePanels, getPanels, savePanels, getTables, saveTables, addActivityLog } from '@/lib/data';
 import { getCompanies } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
-import { getAllCompanies, getPlantDetails, deletePanel, refreshPanelData } from '@/lib/realFileSystem'; // Import from realFileSystem
+import { getAllCompanies, getPlantDetails, deletePanel, refreshPanelData, PlantDetails } from '@/lib/realFileSystem'; // Import from realFileSystem
 
 const ViewTables = () => {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ const ViewTables = () => {
   const [user] = useState(getCurrentUser());
   const [tables, setTables] = useState<any[]>([]);
   const [panels, setPanels] = useState<Panel[]>([]);
+  const [plantDetails, setPlantDetails] = useState<PlantDetails | null>(null);
   const [editingTableId, setEditingTableId] = useState<string | null>(null);
   const [panelToDelete, setPanelToDelete] = useState<Panel | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -67,6 +68,7 @@ const ViewTables = () => {
         // Load plant details from backend
         const plantDetails = await getPlantDetails(user.companyId);
         if (plantDetails) {
+          setPlantDetails(plantDetails); // Store plant details for use in table
           setTables(plantDetails.tables || []);
           
           // Generate panels from plant details
@@ -378,6 +380,7 @@ const ViewTables = () => {
     // Log activity for super admin monitoring
     const companies = getCompanies();
     const company = companies.find(c => c.id === user.companyId);
+
     addActivityLog(
       user.companyId,
       company?.name || 'Unknown Company',
@@ -387,7 +390,7 @@ const ViewTables = () => {
       tableToDelete.serialNumber,
       `Deleted table ${tableToDelete.serialNumber} with ${panelsToDelete.length} panels. Table numbers rearranged.`,
       user.email
-    );
+    ); //Super Admin Monitoring
 
     toast({
       title: 'Table Deleted',
@@ -397,12 +400,12 @@ const ViewTables = () => {
     setShowDeleteTableDialog(false);
     setTableToDelete(null);
     setEditingTableId(null); // Exit edit mode
-  };
+  }; 
 
   const cancelDeleteTable = () => {
     setShowDeleteTableDialog(false);
     setTableToDelete(null);
-  };
+  }; 
 
   // Function to calculate panel health percentage
   const getPanelHealthPercentage = (panel: Panel): number => {
@@ -585,6 +588,109 @@ const ViewTables = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Comprehensive Tables Overview */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              All Tables Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Table No</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Top Row Panels</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Bottom Row Panels</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Voltage per Panel</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Current per Panel</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Max Power Generating</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Total Panels</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tables.map((table) => {
+                    const tablePanels = panels.filter(p => p.tableId === table.id);
+                    const topPanelsCount = tablePanels.filter(p => p.position === 'top').length;
+                    const bottomPanelsCount = tablePanels.filter(p => p.position === 'bottom').length;
+                    const totalPanels = topPanelsCount + bottomPanelsCount;
+                    
+                    // Get voltage and current from plant details or table data
+                    const voltagePerPanel = plantDetails?.voltagePerPanel || 20; // Default fallback
+                    const currentPerPanel = plantDetails?.currentPerPanel || 10; // Default fallback
+                    const maxPowerPerPanel = voltagePerPanel * currentPerPanel;
+                    const maxTotalPower = maxPowerPerPanel * totalPanels;
+                    
+                    return (
+                      <tr key={table.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-4 font-medium text-primary">{table.serialNumber}</td>
+                        <td className="py-3 px-4">{topPanelsCount}</td>
+                        <td className="py-3 px-4">{bottomPanelsCount}</td>
+                        <td className="py-3 px-4">{voltagePerPanel}V</td>
+                        <td className="py-3 px-4">{currentPerPanel}A</td>
+                        <td className="py-3 px-4 font-semibold text-green-600">{maxTotalPower}W</td>
+                        <td className="py-3 px-4 font-medium">{totalPanels}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-2">
+                            <Button
+                              variant={editingTableId === table.id ? "destructive" : "outline"}
+                              size="sm"
+                              onClick={() => toggleEditMode(table.id)}
+                              className="h-8"
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              {editingTableId === table.id ? 'Exit Edit' : 'Edit'}
+                            </Button>
+                            {editingTableId === table.id && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteTable(table)}
+                                className="h-8"
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Delete
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              
+              {tables.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg font-medium">No tables found</p>
+                  <p className="text-sm">Create your first table to get started</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Individual Table Details - Collapsible */}
+        {tables.length > 0 && (
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" />
+                Individual Table Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Click on individual panels to view detailed information. Use Edit mode to delete panels.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tables and Panels */}
         {tables.map((table) => {

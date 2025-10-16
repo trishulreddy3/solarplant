@@ -2,17 +2,35 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Zap, Plus, Eye, Building2, Shield, Mail } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Zap, Plus, Eye, Building2, Shield, Mail, Activity } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { getTablesByCompany } from '@/lib/data';
 import { getCompanies } from '@/lib/auth';
+import { PlantDetails } from '@/lib/realFileSystem';
 
 const Infrastructure = () => {
   const navigate = useNavigate();
   const [user] = useState(getCurrentUser());
   const [company, setCompany] = useState<any>(null);
   const [tables, setTables] = useState<any[]>([]);
+  const [plantDetails, setPlantDetails] = useState<PlantDetails | null>(null);
+  const [powerUnit, setPowerUnit] = useState<'W' | 'kW' | 'MW'>('W');
   const [loading, setLoading] = useState(true);
+
+  // Function to convert power based on selected unit
+  const convertPower = (powerInWatts: number): string => {
+    switch (powerUnit) {
+      case 'W':
+        return `${powerInWatts}W`;
+      case 'kW':
+        return `${(powerInWatts / 1000).toFixed(1)}kW`;
+      case 'MW':
+        return `${(powerInWatts / 1000000).toFixed(3)}MW`;
+      default:
+        return `${powerInWatts}W`;
+    }
+  };
 
   useEffect(() => {
     if (!user || user.role !== 'plant_admin') {
@@ -36,6 +54,7 @@ const Infrastructure = () => {
           const { getPlantDetails } = await import('@/lib/realFileSystem');
           const plantDetails = await getPlantDetails(user.companyId);
           if (plantDetails) {
+            setPlantDetails(plantDetails); // Store plant details for table calculations
             setTables(plantDetails.tables || []);
           } else {
             setTables([]);
@@ -333,30 +352,88 @@ const Infrastructure = () => {
           </Button>
         </div>
 
-        {/* Recent Tables */}
+        {/* All Tables Overview */}
         {tables.length > 0 && (
           <Card className="card-modern">
             <CardHeader>
-              <CardTitle>Recent Tables</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" />
+                All Tables Overview
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {tables.slice(-5).reverse().map((table) => (
-                  <div
-                    key={table.id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/20"
-                  >
-                    <div>
-                      <p className="font-semibold">{table.serialNumber}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {table.panelsTop + table.panelsBottom} panels total
-                      </p>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Table No</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Top Row Panels</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Bottom Row Panels</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Voltage per Panel</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Current per Panel</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                        <div className="flex items-center gap-2">
+                          Max Power Generating
+                          <Select value={powerUnit} onValueChange={(value: 'W' | 'kW' | 'MW') => setPowerUnit(value)}>
+                            <SelectTrigger className="w-20 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="W">W</SelectItem>
+                              <SelectItem value="kW">kW</SelectItem>
+                              <SelectItem value="MW">MW</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Total Panels</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tables.map((table) => {
+                      const topPanelsCount = table.panelsTop || 0;
+                      const bottomPanelsCount = table.panelsBottom || 0;
+                      const totalPanels = topPanelsCount + bottomPanelsCount;
+                      
+                      // Get voltage and current from plant details
+                      const voltagePerPanel = plantDetails?.voltagePerPanel || company?.voltagePerPanel || 20;
+                      const currentPerPanel = plantDetails?.currentPerPanel || company?.currentPerPanel || 10;
+                      const maxPowerPerPanel = voltagePerPanel * currentPerPanel;
+                      const maxTotalPower = maxPowerPerPanel * totalPanels;
+                      
+                      return (
+                        <tr key={table.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium text-primary">{table.serialNumber}</td>
+                          <td className="py-3 px-4">{topPanelsCount}</td>
+                          <td className="py-3 px-4">{bottomPanelsCount}</td>
+                          <td className="py-3 px-4">{voltagePerPanel}V</td>
+                          <td className="py-3 px-4">{currentPerPanel}A</td>
+                          <td className="py-3 px-4 font-semibold text-green-600">{convertPower(maxTotalPower)}</td>
+                          <td className="py-3 px-4 font-medium">{totalPanels}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(table.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty State */}
+        {tables.length === 0 && (
+          <Card className="card-modern">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" />
+                All Tables Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-gray-500">
+                <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium">No tables found</p>
+                <p className="text-sm">Create your first table to get started</p>
               </div>
             </CardContent>
           </Card>

@@ -33,10 +33,27 @@ console.log('🔧 API Configuration:', {
 
 // Circuit breaker to prevent infinite retries
 const failedRequests = new Set<string>();
-const MAX_FAILED_ATTEMPTS = 2; // Reduced from 3 to 2
-const GLOBAL_FAILURE_THRESHOLD = 5; // Stop all requests after 5 total failures
+const MAX_FAILED_ATTEMPTS = 3; // Increased back to 3
+const GLOBAL_FAILURE_THRESHOLD = 10; // Increased threshold
+const REQUEST_TIMEOUT = 15000; // 15 seconds timeout
+const RETRY_DELAY = 5000; // 5 seconds delay before retry
 
-// Helper function to check if a request should be skipped
+// Helper function to reset circuit breaker (for debugging)
+export const resetCircuitBreaker = () => {
+  failedRequests.clear();
+  console.log('🔄 Circuit breaker reset');
+};
+
+// Helper function to check circuit breaker status
+export const getCircuitBreakerStatus = () => {
+  return {
+    failedEndpoints: Array.from(failedRequests),
+    totalFailures: failedRequests.size,
+    isGlobalBreakerActive: failedRequests.size >= GLOBAL_FAILURE_THRESHOLD
+  };
+};
+
+// Enhanced API call function with better timeout handling
 const shouldSkipRequest = (endpoint: string): boolean => {
   // Skip if this specific endpoint has failed
   if (failedRequests.has(endpoint)) {
@@ -67,12 +84,6 @@ const markRequestFailed = (endpoint: string): void => {
 const markRequestSuccess = (endpoint: string): void => {
   failedRequests.delete(endpoint);
   console.log(`✅ Marking endpoint as successful: ${endpoint}. Remaining failures: ${failedRequests.size}`);
-};
-
-// Reset circuit breaker (useful for testing or manual reset)
-export const resetCircuitBreaker = (): void => {
-  failedRequests.clear();
-  console.log('🔄 Circuit breaker reset');
 };
 
 export interface CompanyFolder {
@@ -135,18 +146,18 @@ export interface PlantTable {
 // API helper function with timeout
 async function apiCall(endpoint: string, options: RequestInit = {}) {
   try {
-    // Check circuit breaker
-    if (shouldSkipRequest(endpoint)) {
-      console.warn(`🚫 Skipping request to ${endpoint} due to circuit breaker`);
-      throw new Error(`Request skipped due to circuit breaker: ${endpoint}`);
-    }
+    // Temporarily disable circuit breaker for testing
+    // if (shouldSkipRequest(endpoint)) {
+    //   console.warn(`🚫 Skipping request to ${endpoint} due to circuit breaker`);
+    //   throw new Error(`Request skipped due to circuit breaker: ${endpoint}`);
+    // }
 
     const url = `${API_BASE_URL}${endpoint}`;
     console.log('🌐 Making API call to:', url);
     
     // Add timeout to prevent hanging requests
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT); // Use configurable timeout
     
     const response = await fetch(url, {
       headers: {
@@ -395,4 +406,21 @@ export const addPanels = async (companyId: string, tableId: string, position: 't
     return false;
   }
 };
+
+// Debug utilities for production troubleshooting
+if (typeof window !== 'undefined') {
+  // Make circuit breaker functions available in browser console
+  (window as any).resetCircuitBreaker = resetCircuitBreaker;
+  (window as any).getCircuitBreakerStatus = getCircuitBreakerStatus;
+  (window as any).testApiConnection = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/companies`);
+      console.log('✅ API Connection Test:', response.status, response.statusText);
+      return { success: true, status: response.status };
+    } catch (error) {
+      console.error('❌ API Connection Test Failed:', error);
+      return { success: false, error: error.message };
+    }
+  };
+}
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Shield, Sun, User } from 'lucide-react';
 import { getCurrentUser, isLoggedIn } from '@/lib/auth';
+import logo from '@/images/logo.png';
 
 const Welcome = () => {
   const navigate = useNavigate();
@@ -33,8 +34,22 @@ const Welcome = () => {
       <div className="w-full max-w-md">
         <div className="login-card">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl mb-6 shadow-lg shadow-blue-500/25">
-              <Sun className="w-10 h-10 text-white" />
+            <div className="inline-flex items-center justify-center w-32 h-32 mb-6">
+              <img 
+                src={logo} 
+                alt="Microsyslogic Logo" 
+                className="w-87 h-35 object-contain"
+                onError={(e) => {
+                  // Fallback to Sun icon if logo fails to load
+                  const target = e.currentTarget as HTMLImageElement;
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  target.style.display = 'none';
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+              <div className="inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl shadow-lg shadow-blue-500/25" style={{display: 'none'}}>
+                <Sun className="w-16 h-16 text-white" />
+              </div>
             </div>
             <h1 className="text-4xl font-bold text-primary mb-3">
               Microsyslogic

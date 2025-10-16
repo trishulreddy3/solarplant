@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, LogIn } from 'lucide-react';
+import { ArrowLeft, LogIn, Eye, EyeOff } from 'lucide-react';
 import { login, getStoredCredentials, storeCredentials } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import logo from '@/images/logo.png';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const AdminLogin = () => {
     companyName: '',
   });
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Load stored credentials on component mount
   useEffect(() => {
@@ -89,8 +91,22 @@ const AdminLogin = () => {
 
         <div className="login-card">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl mb-6 shadow-lg shadow-blue-500/25">
-              <LogIn className="w-10 h-10 text-white" />
+            <div className="inline-flex items-center justify-center w-32 h-32 mb-6">
+              <img 
+                src={logo} 
+                alt="Microsyslogic Logo" 
+                className="w-32 h-32 object-contain"
+                onError={(e) => {
+                  // Fallback to LogIn icon if logo fails to load
+                  const target = e.currentTarget as HTMLImageElement;
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  target.style.display = 'none';
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+              <div className="inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl shadow-lg shadow-blue-500/25" style={{display: 'none'}}>
+                <LogIn className="w-16 h-16 text-white" />
+              </div>
             </div>
             <h1 className="text-4xl font-bold text-primary mb-3">
               Admin Login
@@ -127,15 +143,28 @@ const AdminLogin = () => {
 
             <div className="space-y-3">
               <Label htmlFor="password" className="text-base font-medium text-gray-700">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-                className="h-14 text-base input-modern"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  className="h-14 text-base input-modern pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
