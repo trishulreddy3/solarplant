@@ -8,7 +8,7 @@ import { ArrowLeft, LogIn } from 'lucide-react';
 import { login, getStoredCredentials, storeCredentials } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 
-const AdminLogin = () => {
+const AdminLogin = () => {  
   const navigate = useNavigate();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -96,10 +96,10 @@ const AdminLogin = () => {
               Admin Login
             </h1>
             <p className="text-gray-600 text-base font-medium">Sign in to your admin account</p>
-          </div>
+          </div>{/* AdminLogin.tsx closing div */}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-3">
+            <div className="space-y-3">{/* companyName div opening div */}  
               <Label htmlFor="companyName" className="text-base font-medium text-gray-700">Company Name</Label>
               <Input
                 id="companyName"
@@ -110,9 +110,9 @@ const AdminLogin = () => {
                 required
                 className="h-14 text-base input-modern"
               />
-            </div>
+            </div>{/* companyName div */}
 
-            <div className="space-y-3">
+            <div className="space-y-3">{/* loginId div */}
               <Label htmlFor="loginId" className="text-base font-medium text-gray-700">Login ID / Email</Label>
               <Input
                 id="loginId"
@@ -123,9 +123,9 @@ const AdminLogin = () => {
                 required
                 className="h-14 text-base input-modern"
               />
-            </div>
+            </div>{/* loginId div closing div */}
 
-            <div className="space-y-3">
+            <div className="space-y-3">{/* password div */}
               <Label htmlFor="password" className="text-base font-medium text-gray-700">Password</Label>
               <Input
                 id="password"
@@ -136,9 +136,9 @@ const AdminLogin = () => {
                 required
                 className="h-14 text-base input-modern"
               />
-            </div>
+            </div>{/* password div */}
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2">{/* remember me div opening div */}
               <Checkbox 
                 id="remember" 
                 checked={rememberMe}
@@ -147,7 +147,7 @@ const AdminLogin = () => {
               <Label htmlFor="remember" className="text-sm font-medium text-gray-700">
                 Remember me
               </Label>
-            </div>
+            </div>{/* remember me div closing div */}
 
             <Button
               type="submit"
@@ -156,9 +156,9 @@ const AdminLogin = () => {
               <LogIn className="mr-3 h-6 w-6" />
               Login
             </Button>
-          </form>
+          </form>{/* form closing div */}
 
-          <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">{/* demo credentials */}
             <h3 className="text-sm font-semibold text-blue-800 mb-2">Demo Credentials:</h3>
             <div className="text-xs text-blue-700 space-y-1">
               <div><strong>Super Admin:</strong></div>

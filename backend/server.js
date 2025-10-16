@@ -227,10 +227,17 @@ const generatePanelData = (panelCount, voltagePerPanel, currentPerPanel, existin
       currentMultiplier = 0.05 + (seriesHealth / 100) * 0.15;
     }
     
+    // Calculate the actual current for this panel based on health multiplier
+    // The current is reduced based on the panel's health condition (perfect/repairing/fault)
     const seriesLimitedCurrent = currentPerPanel * currentMultiplier;
+    
+    // Round current to 1 decimal place for realistic precision
     const actualCurrent = Math.round(seriesLimitedCurrent * 10) / 10;
+    
+    // Calculate power using P = V × I formula, rounded to 1 decimal place
     const actualPower = Math.round(actualVoltage * actualCurrent * 10) / 10;
     
+    // Store the calculated values in arrays for this panel
     voltage.push(actualVoltage);
     current.push(actualCurrent);
     power.push(actualPower);
@@ -242,14 +249,27 @@ const generatePanelData = (panelCount, voltagePerPanel, currentPerPanel, existin
     }
   }
   
+  // Return comprehensive panel data object containing all calculated metrics
   return { 
+    // Arrays containing voltage, current, and power values for each panel
     voltage, 
     current, 
     power, 
+    
+    // Array of health percentages for each individual panel
     health: panelHealth, 
+    
+    // Array of visual states for each panel (normal, warning, fault, etc.)
     states: panelStates,
+    
+    // Overall series connection state (healthy, warning, fault)
     seriesState,
+    
+    // Average health of the entire series, rounded to 1 decimal place
     seriesHealth: Math.round(seriesHealth * 10) / 10,
+    
+    // Index of the actual faulty panel (null if no fault or weakest panel is still healthy)
+    // Only considers it faulty if the weakest panel has health below 80%
     actualFaultyIndex: actualFaultyIndex !== -1 && weakestHealth < 80 ? actualFaultyIndex : null
   };
 };
