@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Shield, Sun, User } from 'lucide-react';
 import { getCurrentUser, isLoggedIn } from '@/lib/auth';
-import logo from '@/images/logo.png';
+import logo from '@/images/logo1.png';
 
 const Welcome = () => {
   const navigate = useNavigate();
@@ -34,11 +34,11 @@ const Welcome = () => {
       <div className="w-full max-w-md">
         <div className="login-card">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-32 h-32 mb-6">
+            <div className="inline-flex items-center justify-center w-[300px] h-[300px] md:w-[360px] md:h-[360px] mb-6">
               <img 
                 src={logo} 
                 alt="Microsyslogic Logo" 
-                className="w-87 h-35 object-contain"
+                className="w-full h-full object-contain"
                 onError={(e) => {
                   // Fallback to Sun icon if logo fails to load
                   const target = e.currentTarget as HTMLImageElement;
@@ -47,13 +47,10 @@ const Welcome = () => {
                   if (fallback) fallback.style.display = 'flex';
                 }}
               />
-              <div className="inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl shadow-lg shadow-blue-500/25" style={{display: 'none'}}>
-                <Sun className="w-16 h-16 text-white" />
+              <div className="inline-flex items-center justify-center w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl shadow-lg shadow-blue-500/25" style={{display: 'none'}}>
+                <Sun className="w-24 h-24 md:w-28 md:h-28 text-white" />
               </div>
             </div>
-            <h1 className="text-4xl font-bold text-primary mb-3">
-              Microsyslogic
-            </h1>
             <p className="text-gray-600 text-base font-medium">Solar Plant Monitor</p>
           </div>
 
