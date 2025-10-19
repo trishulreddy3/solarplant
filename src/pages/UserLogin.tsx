@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, LogIn, Eye, EyeOff } from 'lucide-react';
 import { login, getStoredCredentials, storeCredentials } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
-import logo from '@/images/logo.png';
+import logo from '@/images/logo1.png';
 
 const UserLogin = () => {
   const navigate = useNavigate();

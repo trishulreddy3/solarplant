@@ -30,7 +30,7 @@ If the logo fails to load, the system will automatically fallback to the origina
 
 ### Adding Your Logo
 
-1. Replace `logo.png` in this folder with your actual logo file
+1. Replace `logo1.png` in this folder with your actual logo file
 2. Ensure the file is named exactly `logo.png`
 3. The logo will automatically appear on all login pages
 4. No code changes are required
@@ -49,7 +49,7 @@ src/
 
 The logo is imported using ES6 modules:
 ```typescript
-import logo from '@/images/logo.png';
+import logo from '@/images/logo1.png';
 ```
 
 And displayed with error handling:

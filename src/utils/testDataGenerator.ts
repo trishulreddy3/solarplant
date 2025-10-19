@@ -334,18 +334,54 @@ export const generateTestDataWithConfigs = (totalTables: number, tableConfigs: A
     const config = tableConfigs.find(tc => tc.tableNumber === table) || { tableNumber: table, topRowPanels: 20, bottomRowPanels: 20 };
     
     console.log(`Table ${table}: ${config.topRowPanels} top + ${config.bottomRowPanels} bottom panels`);
-    
-    // Generate top row panels for this specific table
-    for (let panel = 1; panel <= config.topRowPanels; panel++) {
-      const panelDataItem = generateIndividualPanelData(table, panel, true, config.topRowPanels, config.bottomRowPanels, companyId);
-      panelData.push(panelDataItem);
+
+    // Generate top and bottom rows first
+    const topRow: Panel[] = [];
+    const bottomRow: Panel[] = [];
+
+    for (let pos = 1; pos <= config.topRowPanels; pos++) {
+      topRow.push(
+        generateIndividualPanelData(table, pos, true, config.topRowPanels, config.bottomRowPanels, companyId)
+      );
     }
-    
-    // Generate bottom row panels for this specific table
-    for (let panel = 1; panel <= config.bottomRowPanels; panel++) {
-      const panelDataItem = generateIndividualPanelData(table, panel, false, config.topRowPanels, config.bottomRowPanels, companyId);
-      panelData.push(panelDataItem);
+    for (let pos = 1; pos <= config.bottomRowPanels; pos++) {
+      bottomRow.push(
+        generateIndividualPanelData(table, pos, false, config.topRowPanels, config.bottomRowPanels, companyId)
+      );
     }
+
+    
+    const applyCascade = (row: Panel[]) => {
+      const firstFaultIdx = row.findIndex(p => p.isFaultPanel);
+      const firstCleanIdx = row.findIndex(p => p.needsCleaning);
+
+      for (let i = 0; i < row.length; i++) {
+        const p = row[i];
+
+        if (firstFaultIdx !== -1 && i >= firstFaultIdx) {
+          p.isAffectedBySeriesBreak = true;
+          p.isAffectedByCleaning = false;
+          p.isFaulty = true;
+          p.healthPercentage = 30;
+          p.healthStatus = '<50%';
+          continue;
+        }
+
+        if (firstCleanIdx !== -1 && i >= firstCleanIdx) {
+          p.isAffectedByCleaning = true;
+          p.isAffectedBySeriesBreak = false;
+          p.isFaulty = true;
+          p.healthPercentage = 70;
+          p.healthStatus = '50-89%';
+        }
+      }
+    };
+
+    applyCascade(topRow);
+    applyCascade(bottomRow);
+
+    // Push back to global list in order: top row then bottom row
+    panelData.push(...topRow, ...bottomRow);
   }
   
   console.log(`Generated ${panelData.length} total panels for company ${companyId || 'unknown'}`);
