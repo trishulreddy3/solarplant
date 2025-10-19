@@ -113,3 +113,38 @@ After deployment, verify:
 ## 📞 Need Help?
 
 Check detailed guide: `DEPLOYMENT.md`
+
+## Run Project Locally
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/your-username/solarplant.git
+cd solarplant
+```
+
+### 2. Install Dependencies
+```bash
+# For Backend
+cd backend
+npm install
+
+# For Frontend
+cd ../frontend
+npm install
+```
+
+### 3. Start Backend
+```bash
+cd backend
+npm run dev
+```
+
+### 4. Start Frontend
+```bash
+cd ../frontend
+npm run dev
+```
+
+### 5. Access Locally
+- Backend: http://localhost:5000/api/status
+- Frontend: http://localhost:3000
